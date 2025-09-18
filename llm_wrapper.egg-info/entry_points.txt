@@ -1,0 +1,2 @@
+[console_scripts]
+llm-wrapper-web = web.app:app
