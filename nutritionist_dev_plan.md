@@ -29,7 +29,6 @@ Transform the existing LLM wrapper chat interface into a comprehensive nutrition
 3. **Enhanced Chat Panel**
    - Chat history persistence
    - System prompts for nutritionist context
-   - File upload capability for existing meal plans
 
 #### Deliverables:
 - New HTML template with dual-panel layout

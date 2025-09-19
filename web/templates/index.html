@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LLM Wrapper Demo</title>
+    <title>Nutritionist Copilot</title>
     <style>
         * {
             margin: 0;
@@ -13,42 +13,210 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #f5f7fa;
             min-height: 100vh;
-            padding: 20px;
+            margin: 0;
+            padding: 0;
         }
 
-        .container {
-            max-width: 800px;
+        .main-container {
+            display: flex;
+            height: 100vh;
+            max-width: 1400px;
             margin: 0 auto;
             background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+
+        .chat-section {
+            flex: 0 0 60%;
+            display: flex;
+            flex-direction: column;
+            border-right: 2px solid #e9ecef;
+        }
+
+        .meal-plan-section {
+            flex: 0 0 40%;
+            display: flex;
+            flex-direction: column;
+            background: #fafbfc;
         }
 
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
             color: white;
-            padding: 30px;
+            padding: 20px;
             text-align: center;
+            flex-shrink: 0;
         }
 
         .header h1 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
         }
 
         .header p {
             opacity: 0.9;
-            font-size: 1.1rem;
+            font-size: 0.9rem;
+        }
+
+        .meal-plan-header {
+            background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .meal-plan-header h2 {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
         }
 
         .chat-container {
-            padding: 30px;
-            height: 500px;
+            flex: 1;
+            padding: 20px;
             overflow-y: auto;
+            background: #ffffff;
+        }
+
+        .meal-plan-container {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .meal-section {
+            background: white;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .meal-header {
             background: #f8f9fa;
+            padding: 15px 20px;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .meal-name {
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: #2c3e50;
+        }
+
+        .meal-macros {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+
+        .food-item {
+            padding: 12px 20px;
+            border-bottom: 1px solid #f8f9fa;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .food-item:last-child {
+            border-bottom: none;
+        }
+
+        .food-info {
+            flex: 1;
+        }
+
+        .food-name {
+            font-weight: 500;
+            color: #2c3e50;
+            margin-bottom: 2px;
+        }
+
+        .food-quantity {
+            font-size: 0.8rem;
+            color: #6c757d;
+        }
+
+        .food-macros {
+            font-size: 0.8rem;
+            color: #6c757d;
+            text-align: right;
+        }
+
+        .add-meal-btn {
+            background: #FF9800;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 15px;
+            transition: background-color 0.3s;
+        }
+
+        .add-meal-btn:hover {
+            background: #F57C00;
+        }
+
+        .add-food-btn {
+            background: none;
+            border: 2px dashed #ddd;
+            color: #6c757d;
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s;
+        }
+
+        .add-food-btn:hover {
+            border-color: #FF9800;
+            color: #FF9800;
+        }
+
+        .total-macros {
+            background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
+            color: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .macro-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .macro-item {
+            text-align: center;
+        }
+
+        .macro-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            display: block;
+        }
+
+        .macro-label {
+            font-size: 0.8rem;
+            opacity: 0.9;
         }
 
         .message {
@@ -60,7 +228,7 @@
         }
 
         .user-message {
-            background: #667eea;
+            background: #4CAF50;
             color: white;
             margin-left: auto;
             text-align: right;
@@ -93,7 +261,7 @@
         }
 
         .input-container input:focus {
-            border-color: #667eea;
+            border-color: #4CAF50;
         }
 
         .btn {
@@ -107,12 +275,12 @@
         }
 
         .btn-primary {
-            background: #667eea;
+            background: #4CAF50;
             color: white;
         }
 
         .btn-primary:hover {
-            background: #5a6fd8;
+            background: #2E7D32;
             transform: translateY(-2px);
         }
 
@@ -159,14 +327,14 @@
             min-width: 50px;
             text-align: center;
             font-weight: 600;
-            color: #667eea;
+            color: #4CAF50;
         }
 
         .loading {
             display: none;
             text-align: center;
             padding: 20px;
-            color: #667eea;
+            color: #4CAF50;
         }
 
         .error {
@@ -179,7 +347,7 @@
         }
 
         .streaming {
-            border-left: 3px solid #667eea;
+            border-left: 3px solid #4CAF50;
             animation: pulse 1.5s infinite;
         }
 
@@ -192,10 +360,73 @@
         .toggle-settings {
             background: none;
             border: none;
-            color: #667eea;
+            color: #4CAF50;
             font-size: 14px;
             cursor: pointer;
             text-decoration: underline;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+                height: auto;
+                min-height: 100vh;
+            }
+            
+            .chat-section {
+                flex: none;
+                order: 2;
+            }
+            
+            .meal-plan-section {
+                flex: none;
+                order: 1;
+                border-right: none;
+                border-bottom: 2px solid #e9ecef;
+            }
+            
+            .macro-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .meal-plan-header h2 {
+                font-size: 1.3rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .main-container {
+                margin: 0;
+                border-radius: 0;
+            }
+            
+            .header, .meal-plan-header {
+                padding: 15px;
+            }
+            
+            .chat-container, .meal-plan-container {
+                padding: 15px;
+            }
+            
+            .input-container {
+                padding: 15px;
+                flex-wrap: wrap;
+            }
+            
+            .settings-row {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 10px;
+            }
+            
+            .settings-row label {
+                min-width: auto;
+            }
         }
 
         .settings.hidden {
@@ -204,56 +435,232 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>🤖 LLM Wrapper Demo</h1>
-            <p>Test your LLM wrapper with a simple chat interface</p>
+    <div class="main-container">
+        <!-- Chat Section (Left Panel - 60%) -->
+        <div class="chat-section">
+            <div class="header">
+                <h1>🥗 Nutritionist Copilot</h1>
+                <p>AI-powered meal planning assistant</p>
+            </div>
+
+            <div class="chat-container" id="chatContainer">
+                <div class="message bot-message">
+                    👋 Hello! I'm your AI nutritionist assistant. I can help you create and modify meal plans. How can I assist you today?
+                </div>
+            </div>
+
+            <div class="loading" id="loading">
+                <div>🤔 Analyzing nutrition...</div>
+            </div>
+
+            <div class="settings hidden" id="settings">
+                <div class="settings-row">
+                    <label>Model:</label>
+                    <select id="modelSelect">
+                        <option value="claude-3-5-haiku-20241022">Claude 3.5 Haiku</option>
+                        <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet</option>
+                    </select>
+                </div>
+                <div class="settings-row">
+                    <label>Temperature:</label>
+                    <input type="range" id="temperatureRange" min="0" max="2" step="0.1" value="0.7">
+                    <span class="range-value" id="temperatureValue">0.7</span>
+                </div>
+                <div class="settings-row">
+                    <label>Max Tokens:</label>
+                    <input type="range" id="maxTokensRange" min="100" max="4000" step="100" value="1000">
+                    <span class="range-value" id="maxTokensValue">1000</span>
+                </div>
+                <div class="settings-row">
+                    <label>Streaming:</label>
+                    <input type="checkbox" id="streamingCheckbox" checked>
+                </div>
+            </div>
+
+            <div class="input-container">
+                <input type="text" id="messageInput" placeholder="Ask about nutrition, modify meals, or create new plans..." autocomplete="off">
+                <button class="btn btn-primary" id="sendButton">Send</button>
+                <button class="btn btn-secondary" id="clearButton">Clear</button>
+                <button class="toggle-settings" id="toggleSettings">Settings</button>
+            </div>
         </div>
 
-        <div class="chat-container" id="chatContainer">
-            <div class="message bot-message">
-                👋 Hello! I'm your AI assistant. Ask me anything!
+        <!-- Meal Plan Section (Right Panel - 40%) -->
+        <div class="meal-plan-section">
+            <div class="meal-plan-header">
+                <h2>📋 Today's Meal Plan</h2>
             </div>
-        </div>
 
-        <div class="loading" id="loading">
-            <div>🤔 Thinking...</div>
-        </div>
+            <div class="meal-plan-container" id="mealPlanContainer">
+                <!-- Daily Total Macros -->
+                <div class="total-macros">
+                    <h3>Daily Totals</h3>
+                    <div class="macro-grid">
+                        <div class="macro-item">
+                            <span class="macro-value" id="totalCalories">1847</span>
+                            <span class="macro-label">Calories</span>
+                        </div>
+                        <div class="macro-item">
+                            <span class="macro-value" id="totalCarbs">185g</span>
+                            <span class="macro-label">Carbs</span>
+                        </div>
+                        <div class="macro-item">
+                            <span class="macro-value" id="totalProtein">92g</span>
+                            <span class="macro-label">Protein</span>
+                        </div>
+                        <div class="macro-item">
+                            <span class="macro-value" id="totalFat">74g</span>
+                            <span class="macro-label">Fat</span>
+                        </div>
+                    </div>
+                </div>
 
-        <div class="settings" id="settings">
-            <div class="settings-row">
-                <label>Model:</label>
-                <select id="modelSelect">
-                    <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-                    <option value="gpt-4">GPT-4</option>
-                    <option value="gpt-4-turbo-preview">GPT-4 Turbo Preview</option>
-                </select>
-            </div>
-            <div class="settings-row">
-                <label>Temperature:</label>
-                <input type="range" id="temperatureRange" min="0" max="2" step="0.1" value="0.7">
-                <span class="range-value" id="temperatureValue">0.7</span>
-            </div>
-            <div class="settings-row">
-                <label>Max Tokens:</label>
-                <input type="range" id="maxTokensRange" min="100" max="4000" step="100" value="1000">
-                <span class="range-value" id="maxTokensValue">1000</span>
-            </div>
-            <div class="settings-row">
-                <label>Streaming:</label>
-                <input type="checkbox" id="streamingCheckbox" checked>
-            </div>
-        </div>
+                <!-- Meals Container -->
+                <div id="mealsContainer">
+                    <!-- Breakfast -->
+                    <div class="meal-section" data-meal-id="breakfast">
+                        <div class="meal-header">
+                            <span class="meal-name" onclick="editMealName('breakfast')">🍳 Breakfast</span>
+                            <span class="meal-macros">485 kcal | 45g C | 23g P | 22g F</span>
+                        </div>
+                        <div class="food-item" data-food-index="0">
+                            <div class="food-info">
+                                <div class="food-name" onclick="editFood('breakfast', 0)">Greek Yogurt</div>
+                                <div class="food-quantity">200g</div>
+                            </div>
+                            <div class="food-macros">130 kcal<br>6g C | 20g P | 0g F</div>
+                            <button onclick="deleteFood('breakfast', 0)" style="background: #dc3545; color: white; border: none; padding: 2px 6px; border-radius: 3px; cursor: pointer; margin-left: 10px; font-size: 12px;">×</button>
+                        </div>
+                        <div class="food-item">
+                            <div class="food-info">
+                                <div class="food-name">Mixed Berries</div>
+                                <div class="food-quantity">100g</div>
+                            </div>
+                            <div class="food-macros">42 kcal<br>10g C | 1g P | 0g F</div>
+                        </div>
+                        <div class="food-item">
+                            <div class="food-info">
+                                <div class="food-name">Granola</div>
+                                <div class="food-quantity">50g</div>
+                            </div>
+                            <div class="food-macros">220 kcal<br>24g C | 6g P | 12g F</div>
+                        </div>
+                        <div class="food-item">
+                            <div class="food-info">
+                                <div class="food-name">Honey</div>
+                                <div class="food-quantity">15g</div>
+                            </div>
+                            <div class="food-macros">46 kcal<br>12g C | 0g P | 0g F</div>
+                        </div>
+                        <button class="add-food-btn" onclick="addFoodToMeal('breakfast')">+ Add Food</button>
+                    </div>
 
-        <div class="input-container">
-            <input type="text" id="messageInput" placeholder="Type your message here..." autocomplete="off">
-            <button class="btn btn-primary" id="sendButton">Send</button>
-            <button class="btn btn-secondary" id="clearButton">Clear</button>
-            <button class="toggle-settings" id="toggleSettings">Settings</button>
+                    <!-- Lunch -->
+                    <div class="meal-section" data-meal-id="lunch">
+                        <div class="meal-header">
+                            <span class="meal-name" onclick="editMealName('lunch')">🥗 Lunch</span>
+                            <span class="meal-macros">542 kcal | 42g C | 38g P | 24g F</span>
+                        </div>
+                        <div class="food-item">
+                            <div class="food-info">
+                                <div class="food-name">Grilled Chicken Breast</div>
+                                <div class="food-quantity">150g</div>
+                            </div>
+                            <div class="food-macros">248 kcal<br>0g C | 46g P | 5g F</div>
+                        </div>
+                        <div class="food-item">
+                            <div class="food-info">
+                                <div class="food-name">Quinoa</div>
+                                <div class="food-quantity">100g cooked</div>
+                            </div>
+                            <div class="food-macros">120 kcal<br>22g C | 4g P | 2g F</div>
+                        </div>
+                        <div class="food-item">
+                            <div class="food-info">
+                                <div class="food-name">Mixed Vegetables</div>
+                                <div class="food-quantity">150g</div>
+                            </div>
+                            <div class="food-macros">45 kcal<br>10g C | 2g P | 0g F</div>
+                        </div>
+                        <div class="food-item">
+                            <div class="food-info">
+                                <div class="food-name">Olive Oil</div>
+                                <div class="food-quantity">10ml</div>
+                            </div>
+                            <div class="food-macros">82 kcal<br>0g C | 0g P | 9g F</div>
+                        </div>
+                        <button class="add-food-btn" onclick="addFoodToMeal('lunch')">+ Add Food</button>
+                    </div>
+
+                    <!-- Snack -->
+                    <div class="meal-section" data-meal-id="snack">
+                        <div class="meal-header">
+                            <span class="meal-name" onclick="editMealName('snack')">🥜 Snack</span>
+                            <span class="meal-macros">188 kcal | 8g C | 6g P | 15g F</span>
+                        </div>
+                        <div class="food-item">
+                            <div class="food-info">
+                                <div class="food-name">Almonds</div>
+                                <div class="food-quantity">25g</div>
+                            </div>
+                            <div class="food-macros">146 kcal<br>5g C | 5g P | 13g F</div>
+                        </div>
+                        <div class="food-item">
+                            <div class="food-info">
+                                <div class="food-name">Apple</div>
+                                <div class="food-quantity">1 medium (150g)</div>
+                            </div>
+                            <div class="food-macros">78 kcal<br>21g C | 0g P | 0g F</div>
+                        </div>
+                        <button class="add-food-btn" onclick="addFoodToMeal('snack')">+ Add Food</button>
+                    </div>
+
+                    <!-- Dinner -->
+                    <div class="meal-section" data-meal-id="dinner">
+                        <div class="meal-header">
+                            <span class="meal-name" onclick="editMealName('dinner')">🍽️ Dinner</span>
+                            <span class="meal-macros">632 kcal | 58g C | 25g P | 33g F</span>
+                        </div>
+                        <div class="food-item">
+                            <div class="food-info">
+                                <div class="food-name">Salmon Fillet</div>
+                                <div class="food-quantity">120g</div>
+                            </div>
+                            <div class="food-macros">248 kcal<br>0g C | 25g P | 16g F</div>
+                        </div>
+                        <div class="food-item">
+                            <div class="food-info">
+                                <div class="food-name">Sweet Potato</div>
+                                <div class="food-quantity">200g</div>
+                            </div>
+                            <div class="food-macros">172 kcal<br>40g C | 4g P | 0g F</div>
+                        </div>
+                        <div class="food-item">
+                            <div class="food-info">
+                                <div class="food-name">Broccoli</div>
+                                <div class="food-quantity">150g</div>
+                            </div>
+                            <div class="food-macros">41 kcal<br>8g C | 4g P | 0g F</div>
+                        </div>
+                        <div class="food-item">
+                            <div class="food-info">
+                                <div class="food-name">Avocado</div>
+                                <div class="food-quantity">50g</div>
+                            </div>
+                            <div class="food-macros">80 kcal<br>4g C | 1g P | 7g F</div>
+                        </div>
+                        <button class="add-food-btn" onclick="addFoodToMeal('dinner')">+ Add Food</button>
+                    </div>
+                </div>
+
+                <!-- Add New Meal Button -->
+                <button class="add-meal-btn" id="addMealBtn">+ Add New Meal</button>
+            </div>
         </div>
     </div>
 
     <script>
+        // Chat elements
         const chatContainer = document.getElementById('chatContainer');
         const messageInput = document.getElementById('messageInput');
         const sendButton = document.getElementById('sendButton');
@@ -267,6 +674,136 @@
         const maxTokensRange = document.getElementById('maxTokensRange');
         const maxTokensValue = document.getElementById('maxTokensValue');
         const streamingCheckbox = document.getElementById('streamingCheckbox');
+
+        // Meal plan elements
+        const mealPlanContainer = document.getElementById('mealPlanContainer');
+        const mealsContainer = document.getElementById('mealsContainer');
+        const addMealBtn = document.getElementById('addMealBtn');
+        const totalCalories = document.getElementById('totalCalories');
+        const totalCarbs = document.getElementById('totalCarbs');
+        const totalProtein = document.getElementById('totalProtein');
+        const totalFat = document.getElementById('totalFat');
+
+        // Meal plan data structure
+        let mealPlan = {
+            meals: {
+                breakfast: {
+                    name: "🍳 Breakfast",
+                    foods: [
+                        { name: "Greek Yogurt", quantity: "200g", calories: 130, carbs: 6, protein: 20, fat: 0 },
+                        { name: "Mixed Berries", quantity: "100g", calories: 42, carbs: 10, protein: 1, fat: 0 },
+                        { name: "Granola", quantity: "50g", calories: 220, carbs: 24, protein: 6, fat: 12 },
+                        { name: "Honey", quantity: "15g", calories: 46, carbs: 12, protein: 0, fat: 0 }
+                    ]
+                },
+                lunch: {
+                    name: "🥗 Lunch",
+                    foods: [
+                        { name: "Grilled Chicken Breast", quantity: "150g", calories: 248, carbs: 0, protein: 46, fat: 5 },
+                        { name: "Quinoa", quantity: "100g cooked", calories: 120, carbs: 22, protein: 4, fat: 2 },
+                        { name: "Mixed Vegetables", quantity: "150g", calories: 45, carbs: 10, protein: 2, fat: 0 },
+                        { name: "Olive Oil", quantity: "10ml", calories: 82, carbs: 0, protein: 0, fat: 9 }
+                    ]
+                },
+                snack: {
+                    name: "🥜 Snack", 
+                    foods: [
+                        { name: "Almonds", quantity: "25g", calories: 146, carbs: 5, protein: 5, fat: 13 },
+                        { name: "Apple", quantity: "1 medium (150g)", calories: 78, carbs: 21, protein: 0, fat: 0 }
+                    ]
+                },
+                dinner: {
+                    name: "🍽️ Dinner",
+                    foods: [
+                        { name: "Salmon Fillet", quantity: "120g", calories: 248, carbs: 0, protein: 25, fat: 16 },
+                        { name: "Sweet Potato", quantity: "200g", calories: 172, carbs: 40, protein: 4, fat: 0 },
+                        { name: "Broccoli", quantity: "150g", calories: 41, carbs: 8, protein: 4, fat: 0 },
+                        { name: "Avocado", quantity: "50g", calories: 80, carbs: 4, protein: 1, fat: 7 }
+                    ]
+                }
+            }
+        };
+
+        // Meal plan functions
+        function calculateTotalMacros() {
+            let totals = { calories: 0, carbs: 0, protein: 0, fat: 0 };
+            
+            Object.values(mealPlan.meals).forEach(meal => {
+                meal.foods.forEach(food => {
+                    totals.calories += food.calories;
+                    totals.carbs += food.carbs;
+                    totals.protein += food.protein;
+                    totals.fat += food.fat;
+                });
+            });
+            
+            return totals;
+        }
+
+        function updateTotalMacrosDisplay() {
+            const totals = calculateTotalMacros();
+            totalCalories.textContent = Math.round(totals.calories);
+            totalCarbs.textContent = Math.round(totals.carbs) + 'g';
+            totalProtein.textContent = Math.round(totals.protein) + 'g';
+            totalFat.textContent = Math.round(totals.fat) + 'g';
+        }
+
+        function calculateMealMacros(mealId) {
+            const meal = mealPlan.meals[mealId];
+            if (!meal) return { calories: 0, carbs: 0, protein: 0, fat: 0 };
+            
+            let totals = { calories: 0, carbs: 0, protein: 0, fat: 0 };
+            meal.foods.forEach(food => {
+                totals.calories += food.calories;
+                totals.carbs += food.carbs;
+                totals.protein += food.protein;
+                totals.fat += food.fat;
+            });
+            
+            return totals;
+        }
+
+        function updateMealDisplay(mealId) {
+            const mealElement = document.querySelector(`[data-meal-id="${mealId}"]`);
+            if (!mealElement) return;
+            
+            const meal = mealPlan.meals[mealId];
+            const macros = calculateMealMacros(mealId);
+            
+            // Update meal header with calculated macros
+            const macrosText = `${Math.round(macros.calories)} kcal | ${Math.round(macros.carbs)}g C | ${Math.round(macros.protein)}g P | ${Math.round(macros.fat)}g F`;
+            mealElement.querySelector('.meal-macros').textContent = macrosText;
+            
+            updateTotalMacrosDisplay();
+        }
+
+        function getCurrentMealPlanAsText() {
+            let text = "Current Meal Plan:\n\n";
+            
+            Object.entries(mealPlan.meals).forEach(([mealId, meal]) => {
+                const macros = calculateMealMacros(mealId);
+                text += `${meal.name}:\n`;
+                text += `Total: ${Math.round(macros.calories)} kcal | ${Math.round(macros.carbs)}g carbs | ${Math.round(macros.protein)}g protein | ${Math.round(macros.fat)}g fat\n`;
+                
+                meal.foods.forEach(food => {
+                    text += `- ${food.name} (${food.quantity}): ${food.calories} kcal | ${food.carbs}g C | ${food.protein}g P | ${food.fat}g F\n`;
+                });
+                text += '\n';
+            });
+            
+            const totals = calculateTotalMacros();
+            text += `Daily Totals: ${Math.round(totals.calories)} kcal | ${Math.round(totals.carbs)}g carbs | ${Math.round(totals.protein)}g protein | ${Math.round(totals.fat)}g fat`;
+            
+            return text;
+        }
+
+        // Initialize meal plan display
+        function initializeMealPlan() {
+            Object.keys(mealPlan.meals).forEach(mealId => {
+                updateMealDisplay(mealId);
+            });
+            updateTotalMacrosDisplay();
+        }
 
         // Update range values
         temperatureRange.addEventListener('input', () => {
@@ -311,8 +848,12 @@
             loading.style.display = 'block';
             sendButton.disabled = true;
 
+            // Get meal plan context
+            const mealPlanContext = getCurrentMealPlanAsText();
+
             const requestData = {
                 message: message,
+                meal_plan_context: mealPlanContext,
                 model: modelSelect.value,
                 temperature: parseFloat(temperatureRange.value),
                 max_tokens: parseInt(maxTokensRange.value)
@@ -320,7 +861,7 @@
 
             if (streamingCheckbox.checked) {
                 // Streaming response
-                fetch('/api/chat/stream', {
+                fetch('/api/nutritionist/chat/stream', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -373,7 +914,7 @@
                 });
             } else {
                 // Regular response
-                fetch('/api/chat', {
+                fetch('/api/nutritionist/chat', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -413,7 +954,7 @@
         }
 
         function clearChat() {
-            chatContainer.innerHTML = '<div class="message bot-message">👋 Hello! I\'m your AI assistant. Ask me anything!</div>';
+            chatContainer.innerHTML = '<div class="message bot-message">👋 Hello! I\'m your AI nutritionist assistant. I can help you create and modify meal plans. How can I assist you today?</div>';
         }
 
         // Event listeners
@@ -424,6 +965,169 @@
                 sendMessage();
             }
         });
+
+        // Initialize meal plan on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeMealPlan();
+        });
+
+        // Save meal plan to localStorage when modified
+        function saveMealPlan() {
+            localStorage.setItem('nutritionist_meal_plan', JSON.stringify(mealPlan));
+        }
+
+        // Load meal plan from localStorage
+        function loadMealPlan() {
+            const saved = localStorage.getItem('nutritionist_meal_plan');
+            if (saved) {
+                try {
+                    mealPlan = JSON.parse(saved);
+                    initializeMealPlan();
+                } catch (e) {
+                    console.error('Error loading meal plan:', e);
+                }
+            }
+        }
+
+        // Load saved meal plan on page load
+        loadMealPlan();
+
+        // Dynamic meal management functions
+        function addNewMeal() {
+            const mealName = prompt("Enter meal name (e.g., 'Post-Workout Snack', 'Mid-Morning Snack'):");
+            if (!mealName) return;
+
+            const mealId = mealName.toLowerCase().replace(/[^a-z0-9]/g, '_');
+            
+            // Check if meal already exists
+            if (mealPlan.meals[mealId]) {
+                alert("A meal with this name already exists!");
+                return;
+            }
+
+            // Add new meal to data structure
+            mealPlan.meals[mealId] = {
+                name: `🍽️ ${mealName}`,
+                foods: []
+            };
+
+            // Create HTML for new meal
+            const mealHtml = createMealHTML(mealId, mealPlan.meals[mealId]);
+            mealsContainer.insertAdjacentHTML('beforeend', mealHtml);
+            
+            updateMealDisplay(mealId);
+            saveMealPlan();
+        }
+
+        function createMealHTML(mealId, meal) {
+            return `
+                <div class="meal-section" data-meal-id="${mealId}">
+                    <div class="meal-header">
+                        <span class="meal-name" onclick="editMealName('${mealId}')">${meal.name}</span>
+                        <span class="meal-macros">0 kcal | 0g C | 0g P | 0g F</span>
+                        <button onclick="deleteMeal('${mealId}')" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; margin-left: 10px;">Delete</button>
+                    </div>
+                    ${meal.foods.map((food, index) => createFoodHTML(mealId, food, index)).join('')}
+                    <button class="add-food-btn" onclick="addFoodToMeal('${mealId}')">+ Add Food</button>
+                </div>
+            `;
+        }
+
+        function createFoodHTML(mealId, food, index) {
+            return `
+                <div class="food-item" data-food-index="${index}">
+                    <div class="food-info">
+                        <div class="food-name" onclick="editFood('${mealId}', ${index})">${food.name}</div>
+                        <div class="food-quantity">${food.quantity}</div>
+                    </div>
+                    <div class="food-macros">${food.calories} kcal<br>${food.carbs}g C | ${food.protein}g P | ${food.fat}g F</div>
+                    <button onclick="deleteFood('${mealId}', ${index})" style="background: #dc3545; color: white; border: none; padding: 2px 6px; border-radius: 3px; cursor: pointer; margin-left: 10px; font-size: 12px;">×</button>
+                </div>
+            `;
+        }
+
+        function editMealName(mealId) {
+            const meal = mealPlan.meals[mealId];
+            const currentName = meal.name.replace(/^🍽️\s/, '').replace(/^🍳\s/, '').replace(/^🥗\s/, '').replace(/^🥜\s/, '');
+            const newName = prompt("Edit meal name:", currentName);
+            
+            if (newName && newName !== currentName) {
+                meal.name = `🍽️ ${newName}`;
+                document.querySelector(`[data-meal-id="${mealId}"] .meal-name`).textContent = meal.name;
+                saveMealPlan();
+            }
+        }
+
+        function deleteMeal(mealId) {
+            if (confirm("Are you sure you want to delete this meal?")) {
+                delete mealPlan.meals[mealId];
+                document.querySelector(`[data-meal-id="${mealId}"]`).remove();
+                updateTotalMacrosDisplay();
+                saveMealPlan();
+            }
+        }
+
+        function addFoodToMeal(mealId) {
+            const foodName = prompt("Enter food name:");
+            if (!foodName) return;
+            
+            const quantity = prompt("Enter quantity (e.g., '100g', '1 cup'):");
+            if (!quantity) return;
+            
+            const calories = parseFloat(prompt("Enter calories:")) || 0;
+            const carbs = parseFloat(prompt("Enter carbs (g):")) || 0;
+            const protein = parseFloat(prompt("Enter protein (g):")) || 0;
+            const fat = parseFloat(prompt("Enter fat (g):")) || 0;
+            
+            const newFood = { name: foodName, quantity, calories, carbs, protein, fat };
+            mealPlan.meals[mealId].foods.push(newFood);
+            
+            refreshMealDisplay(mealId);
+            saveMealPlan();
+        }
+
+        function editFood(mealId, foodIndex) {
+            const food = mealPlan.meals[mealId].foods[foodIndex];
+            
+            const newName = prompt("Edit food name:", food.name) || food.name;
+            const newQuantity = prompt("Edit quantity:", food.quantity) || food.quantity;
+            const newCalories = parseFloat(prompt("Edit calories:", food.calories)) || food.calories;
+            const newCarbs = parseFloat(prompt("Edit carbs (g):", food.carbs)) || food.carbs;
+            const newProtein = parseFloat(prompt("Edit protein (g):", food.protein)) || food.protein;
+            const newFat = parseFloat(prompt("Edit fat (g):", food.fat)) || food.fat;
+            
+            mealPlan.meals[mealId].foods[foodIndex] = {
+                name: newName,
+                quantity: newQuantity,
+                calories: newCalories,
+                carbs: newCarbs,
+                protein: newProtein,
+                fat: newFat
+            };
+            
+            refreshMealDisplay(mealId);
+            saveMealPlan();
+        }
+
+        function deleteFood(mealId, foodIndex) {
+            if (confirm("Are you sure you want to delete this food item?")) {
+                mealPlan.meals[mealId].foods.splice(foodIndex, 1);
+                refreshMealDisplay(mealId);
+                saveMealPlan();
+            }
+        }
+
+        function refreshMealDisplay(mealId) {
+            const mealElement = document.querySelector(`[data-meal-id="${mealId}"]`);
+            const meal = mealPlan.meals[mealId];
+            
+            // Rebuild the meal HTML
+            mealElement.outerHTML = createMealHTML(mealId, meal);
+            updateMealDisplay(mealId);
+        }
+
+        // Event listeners for dynamic functionality
+        addMealBtn.addEventListener('click', addNewMeal);
     </script>
 </body>
 </html>

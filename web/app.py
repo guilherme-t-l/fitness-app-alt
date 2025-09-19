@@ -23,6 +23,14 @@ except ValueError as e:
     print(f"Configuration error: {e}")
     llm = None
 
+# Load nutritionist system prompt
+def load_system_prompt():
+    try:
+        with open(os.path.join(os.path.dirname(__file__), 'nutritionist_system_prompt.txt'), 'r') as f:
+            return f.read().strip()
+    except FileNotFoundError:
+        return "You are an AI nutritionist assistant. Help users with meal planning and food choices."
+
 
 @app.route('/')
 def index():
@@ -105,6 +113,82 @@ def get_models():
     try:
         models = llm.get_available_models()
         return jsonify({'models': models})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/nutritionist/chat', methods=['POST'])
+def nutritionist_chat():
+    """API endpoint for nutritionist chat with meal plan context."""
+    if not llm:
+        return jsonify({'error': 'LLM wrapper not initialized. Check your API key.'}), 500
+    
+    try:
+        data = request.get_json()
+        user_message = data.get('message', '')
+        meal_plan_context = data.get('meal_plan_context', '')
+        model = data.get('model', 'claude-3-5-haiku-20241022')
+        temperature = data.get('temperature', 0.7)
+        max_tokens = data.get('max_tokens', 1000)
+        
+        if not user_message:
+            return jsonify({'error': 'Message is required'}), 400
+        
+        # Construct the full prompt with system context
+        system_prompt = load_system_prompt()
+        full_prompt = f"{system_prompt}\n\n{meal_plan_context}\n\nUser request: {user_message}"
+        
+        response = llm.generate(
+            prompt=full_prompt,
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens
+        )
+        
+        return jsonify({'response': response})
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/nutritionist/chat/stream', methods=['POST'])
+def nutritionist_chat_stream():
+    """API endpoint for streaming nutritionist chat with meal plan context."""
+    if not llm:
+        return jsonify({'error': 'LLM wrapper not initialized. Check your API key.'}), 500
+    
+    try:
+        data = request.get_json()
+        user_message = data.get('message', '')
+        meal_plan_context = data.get('meal_plan_context', '')
+        model = data.get('model', 'claude-3-5-haiku-20241022')
+        temperature = data.get('temperature', 0.7)
+        max_tokens = data.get('max_tokens', 1000)
+        
+        if not user_message:
+            return jsonify({'error': 'Message is required'}), 400
+        
+        # Construct the full prompt with system context
+        system_prompt = load_system_prompt()
+        full_prompt = f"{system_prompt}\n\n{meal_plan_context}\n\nUser request: {user_message}"
+        
+        def generate():
+            try:
+                for chunk in llm.generate_stream(
+                    prompt=full_prompt,
+                    model=model,
+                    temperature=temperature,
+                    max_tokens=max_tokens
+                ):
+                    yield f"data: {chunk}\n\n"
+            except Exception as e:
+                yield f"data: {{'error': '{str(e)}'}}\n\n"
+        
+        return app.response_class(
+            generate(),
+            mimetype='text/plain'
+        )
+    
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
