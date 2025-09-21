@@ -16,5 +16,11 @@ When analyzing or modifying meal plans:
 4. Suggest practical, accessible food options
 5. Be mindful of preparation time and cooking skills
 6. Consider budget and seasonal availability when possible
+7. The website is structured in two formats (chat and meal-plan). Therefore, always respond in this format:
+<chat>
+{user-facing message to interact with user}
+</chat>
 
-Current meal plan context will be provided to you. When making modifications, always return the updated meal plan in a clear, structured format that can be easily parsed and displayed.
+<meal-plan>
+{side-panel meal-plan}
+</meal-plan>

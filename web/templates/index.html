@@ -346,16 +346,6 @@
             border: 1px solid #f5c6cb;
         }
 
-        .streaming {
-            border-left: 3px solid #4CAF50;
-            animation: pulse 1.5s infinite;
-        }
-
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
-        }
 
         .toggle-settings {
             background: none;
@@ -470,10 +460,6 @@
                     <label>Max Tokens:</label>
                     <input type="range" id="maxTokensRange" min="100" max="4000" step="100" value="1000">
                     <span class="range-value" id="maxTokensValue">1000</span>
-                </div>
-                <div class="settings-row">
-                    <label>Streaming:</label>
-                    <input type="checkbox" id="streamingCheckbox" checked>
                 </div>
             </div>
 
@@ -673,7 +659,6 @@
         const temperatureValue = document.getElementById('temperatureValue');
         const maxTokensRange = document.getElementById('maxTokensRange');
         const maxTokensValue = document.getElementById('maxTokensValue');
-        const streamingCheckbox = document.getElementById('streamingCheckbox');
 
         // Meal plan elements
         const mealPlanContainer = document.getElementById('mealPlanContainer');
@@ -851,94 +836,51 @@
             // Get meal plan context
             const mealPlanContext = getCurrentMealPlanAsText();
 
+            const modelSelect = document.getElementById('modelSelect');
+            const temperatureRange = document.getElementById('temperatureRange');
+            const maxTokensRange = document.getElementById('maxTokensRange');
+            
             const requestData = {
                 message: message,
                 meal_plan_context: mealPlanContext,
-                model: modelSelect.value,
-                temperature: parseFloat(temperatureRange.value),
-                max_tokens: parseInt(maxTokensRange.value)
+                model: modelSelect ? modelSelect.value : 'claude-3-5-haiku-20241022',
+                temperature: temperatureRange ? parseFloat(temperatureRange.value) : 0.7,
+                max_tokens: maxTokensRange ? parseInt(maxTokensRange.value) : 1000
             };
 
-            if (streamingCheckbox.checked) {
-                // Streaming response
-                fetch('/api/nutritionist/chat/stream', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(requestData)
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.body.getReader();
-                })
-                .then(reader => {
-                    const botMessageDiv = addMessage('', 'bot');
-                    botMessageDiv.classList.add('streaming');
+            // Regular response
+            fetch('/api/nutritionist/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                loading.style.display = 'none';
+                sendButton.disabled = false;
+                
+                console.log('Response data:', data);
+                
+                if (data.error) {
+                    addMessage('Error: ' + data.error, 'bot', true);
+                } else {
+                    // Display chat content in the chat area
+                    addMessage(data.chat, 'bot');
                     
-                    function readStream() {
-                        reader.read().then(({ done, value }) => {
-                            if (done) {
-                                loading.style.display = 'none';
-                                sendButton.disabled = false;
-                                botMessageDiv.classList.remove('streaming');
-                                return;
-                            }
-                            
-                            const chunk = new TextDecoder().decode(value);
-                            const lines = chunk.split('\n');
-                            
-                            for (const line of lines) {
-                                if (line.startsWith('data: ')) {
-                                    const data = line.slice(6);
-                                    if (data && !data.includes('error')) {
-                                        botMessageDiv.textContent += data;
-                                        chatContainer.scrollTop = chatContainer.scrollHeight;
-                                    }
-                                }
-                            }
-                            
-                            readStream();
-                        });
+                    // Update meal plan section if meal_plan content is provided
+                    if (data.meal_plan && data.meal_plan.trim()) {
+                        updateMealPlanFromAI(data.meal_plan);
                     }
-                    
-                    readStream();
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    addMessage('Error: ' + error.message, 'bot', true);
-                    loading.style.display = 'none';
-                    sendButton.disabled = false;
-                });
-            } else {
-                // Regular response
-                fetch('/api/nutritionist/chat', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(requestData)
-                })
-                .then(response => response.json())
-                .then(data => {
-                    loading.style.display = 'none';
-                    sendButton.disabled = false;
-                    
-                    if (data.error) {
-                        addMessage('Error: ' + data.error, 'bot', true);
-                    } else {
-                        addMessage(data.response, 'bot');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    addMessage('Error: ' + error.message, 'bot', true);
-                    loading.style.display = 'none';
-                    sendButton.disabled = false;
-                });
-            }
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                addMessage('Error: ' + error.message, 'bot', true);
+                loading.style.display = 'none';
+                sendButton.disabled = false;
+            });
         }
 
         function addMessage(text, sender, isError = false) {
@@ -1124,6 +1066,30 @@
             // Rebuild the meal HTML
             mealElement.outerHTML = createMealHTML(mealId, meal);
             updateMealDisplay(mealId);
+        }
+
+        // Function to update meal plan from AI response
+        function updateMealPlanFromAI(mealPlanText) {
+            // Create a temporary div to display the AI's meal plan suggestions
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = `
+                <div class="meal-section" style="background: #e8f5e8; border-left: 4px solid #4CAF50;">
+                    <div class="meal-header">
+                        <span class="meal-name">🤖 AI Suggestions</span>
+                        <span class="meal-macros">AI Generated</span>
+                    </div>
+                    <div style="padding: 15px 20px;">
+                        <pre style="white-space: pre-wrap; font-family: inherit; margin: 0;">${mealPlanText}</pre>
+                    </div>
+                </div>
+            `;
+            
+            // Insert the AI suggestions at the top of the meal plan container
+            const mealsContainer = document.getElementById('mealsContainer');
+            mealsContainer.insertBefore(tempDiv.firstElementChild, mealsContainer.firstChild);
+            
+            // Scroll to the meal plan section to show the update
+            document.querySelector('.meal-plan-container').scrollTop = 0;
         }
 
         // Event listeners for dynamic functionality
