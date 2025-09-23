@@ -1,319 +1,65 @@
-# LLM Wrapper
+# Nutritionist Co-Pilot App
 
-A simple, scalable wrapper for Large Language Models (LLMs) that provides a unified interface for different AI providers. Currently supports Anthropic's Claude models with an easy-to-use API and a beautiful web interface for testing.
+An AI-powered assistant that helps nutritionists create and modify meal plans through natural conversation. The AI understands nutrition context and can suggest food substitutions while maintaining macro balance.
 
-## 🚀 Features
+## How It Works
 
-- **Simple API**: Easy-to-use interface for interacting with LLMs
-- **Provider Agnostic**: Designed to support multiple LLM providers
-- **Streaming Support**: Real-time text generation with streaming responses
-- **Web Interface**: Beautiful, responsive web UI for testing and demonstration
-- **Configurable**: Flexible configuration for models, temperature, and other parameters
-- **Extensible**: Easy to add new providers and features
+1. **User chats** with an AI nutritionist in the left panel
+2. **AI responds** with both chat messages and meal plan updates
+3. **Meal plan panel** on the right updates automatically
+4. **AI can suggest** food substitutions, dietary adjustments, and macro modifications
 
-## 📁 Project Structure
+## Project Structure
 
 ```
-llm-wrapper/
-├── llm_wrapper/           # Core LLM wrapper package
-│   ├── __init__.py
-│   ├── core.py           # Main LLMWrapper class
-│   ├── config.py         # Configuration management
-│   └── providers/        # LLM provider implementations
-│       ├── __init__.py
-│       ├── base.py       # Base provider interface
-│       └── anthropic.py   # Anthropic provider
-├── web/                  # Web interface
-│   ├── app.py           # Flask web application
+fitness-app-alt/
+├── web/                           # Main application
+│   ├── app.py                    # 🔧 Flask server & API endpoints
+│   ├── nutritionist_system_prompt.txt  # 🔧 AI personality/instructions
 │   └── templates/
-│       └── index.html   # Web UI
-├── requirements.txt      # Python dependencies
-├── setup.py             # Package setup
-├── env.example          # Environment variables example
-└── README.md            # This file
+│       └── index.html            # 🔧 Frontend UI (chat + meal plan panels)
+├── llm_wrapper/                   # AI provider abstraction
+│   ├── core.py                   # 🔧 Main AI wrapper logic
+│   ├── config.py                 # 🔧 Configuration management
+│   └── providers/                # 🔧 AI providers (OpenAI, Anthropic)
+├── requirements.txt              # Python dependencies
+└── deploy.sh                     # Deployment script
 ```
 
-## 🛠️ Installation
+## Key Files to Edit for Development
 
-### Prerequisites
+### **Frontend Changes**
+- `web/templates/index.html` - UI layout, styling, chat interface
 
-- Python 3.8 or higher
-- Anthropic API key
+### **Backend Changes**
+- `web/app.py` - API endpoints, meal plan logic, chat handling
+- `web/nutritionist_system_prompt.txt` - AI behavior and responses
 
-### Quick Start
+### **AI Provider Changes**
+- `llm_wrapper/core.py` - Main AI wrapper functionality
+- `llm_wrapper/providers/` - Add new AI providers or modify existing ones
 
-1. **Clone or download the project:**
-   ```bash
-   git clone <your-repo-url>
-   cd llm-wrapper
-   ```
+## Quick Start
 
-2. **Install dependencies:**
+1. **Install dependencies:**
    ```bash
    pip install -r requirements.txt
    ```
 
-3. **Set up your Anthropic API key:**
+2. **Set API key:**
    ```bash
    export ANTHROPIC_API_KEY="your-api-key-here"
    ```
-   
-   Or create a `.env` file:
-   ```bash
-   cp env.example .env
-   # Edit .env and add your API key
-   ```
 
-4. **Run the web interface:**
+3. **Run the app:**
    ```bash
    python web/app.py
    ```
 
-5. **Open your browser:**
-   Navigate to `http://localhost:5000` to see the web interface.
+4. **Open browser:** `http://localhost:5000`
 
-## 📖 Usage
+## Example Usage
 
-### Basic Usage
-
-```python
-from llm_wrapper import LLMWrapper, Config
-
-# Initialize with your API key
-config = Config(anthropic_api_key="your-api-key-here")
-llm = LLMWrapper(config=config)
-
-# Generate text
-response = llm.generate("Hello, how are you?")
-print(response)
-
-# Generate with specific parameters
-response = llm.generate(
-    prompt="Write a short story about a robot",
-    model="claude-3-5-haiku-20241022",
-    temperature=0.8,
-    max_tokens=500
-)
-print(response)
-```
-
-### Streaming Responses
-
-```python
-# Generate streaming text
-for chunk in llm.generate_stream("Tell me a joke"):
-    print(chunk, end="", flush=True)
-```
-
-### Chat Interface
-
-```python
-# Chat with conversation history
-messages = [
-    {"role": "system", "content": "You are a helpful assistant."},
-    {"role": "user", "content": "What's the weather like?"},
-    {"role": "assistant", "content": "I don't have access to real-time weather data."},
-    {"role": "user", "content": "Can you help me write a poem?"}
-]
-
-response = llm.chat(messages)
-print(response)
-```
-
-### Using Environment Variables
-
-```python
-from llm_wrapper import LLMWrapper, Config
-
-# Automatically loads from ANTHROPIC_API_KEY environment variable
-config = Config.from_env()
-llm = LLMWrapper(config=config)
-
-response = llm.generate("Hello!")
-```
-
-## 🌐 Web Interface
-
-The included web interface provides a beautiful, responsive UI for testing the LLM wrapper:
-
-- **Real-time chat**: Interactive conversation with the AI
-- **Model selection**: Choose between different Claude models
-- **Parameter tuning**: Adjust temperature, max tokens, and other settings
-- **Streaming support**: See responses as they're generated
-- **Error handling**: Clear error messages and status indicators
-
-### Running the Web Interface
-
-```bash
-# From the project root
-python web/app.py
-```
-
-The web interface will be available at `http://localhost:5000`.
-
-## 🔧 Configuration
-
-### Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `ANTHROPIC_API_KEY` | Your Anthropic API key | Required |
-| `DEFAULT_MODEL` | Default model to use | `claude-3-5-haiku-20241022` |
-| `DEFAULT_TEMPERATURE` | Default temperature | `0.7` |
-| `DEFAULT_MAX_TOKENS` | Default max tokens | `1000` |
-
-### Configuration Class
-
-```python
-from llm_wrapper import Config
-
-# Direct configuration
-config = Config(anthropic_api_key="your-key")
-
-# From environment
-config = Config.from_env()
-
-# Validate configuration
-if config.validate():
-    print("Configuration is valid!")
-```
-
-## 🔌 Adding New Providers
-
-The wrapper is designed to be easily extensible. To add a new provider:
-
-1. **Create a new provider class:**
-
-```python
-# llm_wrapper/providers/anthropic.py
-from .base import BaseProvider
-
-class AnthropicProvider(BaseProvider):
-    def __init__(self, api_key: str, **kwargs):
-        super().__init__(api_key, **kwargs)
-        # Initialize your provider client
-    
-    def generate(self, prompt: str, **kwargs) -> str:
-        # Implement text generation
-        pass
-    
-    def generate_stream(self, prompt: str, **kwargs):
-        # Implement streaming generation
-        pass
-    
-    def get_available_models(self) -> List[str]:
-        # Return available models
-        pass
-```
-
-2. **Update the imports:**
-
-```python
-# llm_wrapper/providers/__init__.py
-from .anthropic import AnthropicProvider
-```
-
-3. **Use the new provider:**
-
-```python
-from llm_wrapper import LLMWrapper
-from llm_wrapper.providers import AnthropicProvider
-
-provider = AnthropicProvider(api_key="your-key")
-llm = LLMWrapper(provider=provider)
-```
-
-## 🧪 Testing
-
-### Running Tests
-
-```bash
-# Install test dependencies
-pip install pytest
-
-# Run tests
-pytest
-```
-
-### Manual Testing
-
-Use the web interface or the Python API:
-
-```python
-# Test basic functionality
-from llm_wrapper import LLMWrapper, Config
-
-config = Config(anthropic_api_key="your-key")
-llm = LLMWrapper(config=config)
-
-# Test generation
-response = llm.generate("Test prompt")
-assert response is not None
-
-# Test streaming
-chunks = list(llm.generate_stream("Test streaming"))
-assert len(chunks) > 0
-```
-
-## 📦 Packaging
-
-### Install as a Package
-
-```bash
-pip install -e .
-```
-
-### Build Distribution
-
-```bash
-python setup.py sdist bdist_wheel
-```
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🆘 Troubleshooting
-
-### Common Issues
-
-1. **API Key Error**: Make sure your Anthropic API key is set correctly
-2. **Import Error**: Ensure all dependencies are installed with `pip install -r requirements.txt`
-3. **Web Interface Not Loading**: Check that Flask is installed and the port 5000 is available
-
-### Getting Help
-
-- Check the error messages in the web interface
-- Verify your API key has sufficient credits
-- Ensure you're using a supported Python version (3.8+)
-
-## 🔮 Roadmap
-
-- [ ] Support for more LLM providers (OpenAI, Cohere, etc.)
-- [ ] Conversation memory and context management
-- [ ] Function calling support
-- [ ] Batch processing capabilities
-- [ ] Advanced prompt templates
-- [ ] Metrics and monitoring
-- [ ] Docker support
-
-## 📞 Support
-
-If you encounter any issues or have questions:
-
-1. Check the troubleshooting section above
-2. Review the error messages carefully
-3. Ensure your API key is valid and has credits
-4. Open an issue on GitHub with detailed information
-
----
-
-**Happy coding! 🚀**
+- **"Replace chicken with a vegetarian option"** → AI suggests tofu/tempeh + updates meal plan
+- **"Make this dairy-free"** → AI identifies dairy items and suggests alternatives
+- **"Increase protein for muscle building"** → AI recommends protein-rich additions
