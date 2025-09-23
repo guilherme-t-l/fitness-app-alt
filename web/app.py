@@ -360,33 +360,65 @@ def delete_meal(meal_id):
 # Meal Food API endpoints
 @app.route('/api/meal-foods', methods=['POST'])
 def add_food_to_meal():
-    """Add a food item to a meal."""
+    """Add a food item to a meal - with or without database food."""
     if not db_service:
         return jsonify({'error': 'Database service not initialized'}), 500
     
     try:
         data = request.get_json()
         meal_id = data.get('meal_id')
-        food_id = data.get('food_id')
         quantity_grams = data.get('quantity_grams')
         
-        if not all([meal_id, food_id, quantity_grams is not None]):
-            return jsonify({'error': 'meal_id, food_id, and quantity_grams are required'}), 400
+        if not all([meal_id, quantity_grams is not None]):
+            return jsonify({'error': 'meal_id and quantity_grams are required'}), 400
         
-        meal_food = db_service.add_food_to_meal(meal_id, food_id, quantity_grams)
-        return jsonify({
-            'meal_food': {
-                'id': meal_food.id,
-                'meal_id': meal_food.meal_id,
-                'food_id': meal_food.food_id,
-                'food_name': meal_food.food.name if meal_food.food else 'Unknown',
-                'quantity_grams': meal_food.quantity_grams,
-                'calories': meal_food.calories,
-                'protein': meal_food.protein,
-                'carbs': meal_food.carbs,
-                'fat': meal_food.fat
-            }
-        }), 201
+        # Option 1: Use existing database food
+        if data.get('food_id'):
+            meal_food = db_service.add_food_to_meal(meal_id, data['food_id'], quantity_grams)
+            return jsonify({
+                'meal_food': {
+                    'id': meal_food.id,
+                    'meal_id': meal_food.meal_id,
+                    'food_id': meal_food.food_id,
+                    'food_name': meal_food.food.name if meal_food.food else 'Unknown',
+                    'quantity_grams': meal_food.quantity_grams,
+                    'calories': meal_food.calories,
+                    'protein': meal_food.protein,
+                    'carbs': meal_food.carbs,
+                    'fat': meal_food.fat
+                }
+            }), 201
+        
+        # Option 2: Add food directly with nutritional data (auto-save to database)
+        else:
+            food_name = data.get('food_name')
+            calories_per_100g = data.get('calories_per_100g', 0)
+            protein_per_100g = data.get('protein_per_100g', 0)
+            carbs_per_100g = data.get('carbs_per_100g', 0)
+            fat_per_100g = data.get('fat_per_100g', 0)
+            fiber_per_100g = data.get('fiber_per_100g')
+            
+            if not food_name:
+                return jsonify({'error': 'food_name is required for direct food addition'}), 400
+            
+            meal_food = db_service.add_direct_food_to_meal(
+                meal_id, food_name, quantity_grams,
+                calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, fiber_per_100g
+            )
+            return jsonify({
+                'meal_food': {
+                    'id': meal_food.id,
+                    'meal_id': meal_food.meal_id,
+                    'food_id': meal_food.food_id,
+                    'food_name': meal_food.food_name,
+                    'quantity_grams': meal_food.quantity_grams,
+                    'calories': meal_food.calories,
+                    'protein': meal_food.protein,
+                    'carbs': meal_food.carbs,
+                    'fat': meal_food.fat
+                }
+            }), 201
+            
     except (FoodNotFoundError, ValidationError) as e:
         return jsonify({'error': str(e)}), 400
     except DatabaseError as e:

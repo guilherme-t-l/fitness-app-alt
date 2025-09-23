@@ -25,26 +25,46 @@ class MealFood:
     """Food item within a meal with specific quantity."""
     id: Optional[str] = None
     meal_id: str = ""
-    food_id: str = ""
+    food_id: Optional[str] = None  # Made optional - can be None for direct foods
+    food_name: str = ""  # Direct food name for non-database foods
     quantity_grams: float = 0.0
     created_at: Optional[datetime] = None
+    
+    # Direct nutritional values (for foods not in database)
+    calories_per_100g: float = 0.0
+    protein_per_100g: float = 0.0
+    carbs_per_100g: float = 0.0
+    fat_per_100g: float = 0.0
+    fiber_per_100g: Optional[float] = None
     
     # Computed nutritional values for this specific quantity
     @property
     def calories(self) -> float:
-        return (self.quantity_grams / 100.0) * self.food.calories_per_100g if self.food else 0.0
+        if self.food:
+            return (self.quantity_grams / 100.0) * self.food.calories_per_100g
+        else:
+            return (self.quantity_grams / 100.0) * self.calories_per_100g
     
     @property
     def protein(self) -> float:
-        return (self.quantity_grams / 100.0) * self.food.protein_per_100g if self.food else 0.0
+        if self.food:
+            return (self.quantity_grams / 100.0) * self.food.protein_per_100g
+        else:
+            return (self.quantity_grams / 100.0) * self.protein_per_100g
     
     @property
     def carbs(self) -> float:
-        return (self.quantity_grams / 100.0) * self.food.carbs_per_100g if self.food else 0.0
+        if self.food:
+            return (self.quantity_grams / 100.0) * self.food.carbs_per_100g
+        else:
+            return (self.quantity_grams / 100.0) * self.carbs_per_100g
     
     @property
     def fat(self) -> float:
-        return (self.quantity_grams / 100.0) * self.food.fat_per_100g if self.food else 0.0
+        if self.food:
+            return (self.quantity_grams / 100.0) * self.food.fat_per_100g
+        else:
+            return (self.quantity_grams / 100.0) * self.fat_per_100g
     
     # Reference to the food object (populated when needed)
     food: Optional[Food] = None

@@ -367,22 +367,104 @@ class MealPlanManager {
             return;
         }
 
-        // Find food by name
-        const food = this.foods.find(f => f.name.toLowerCase() === foodName.toLowerCase());
-        if (!food) {
-            this.showError(`Food "${foodName}" not found. Please check the spelling or add it to the database first.`);
-            return;
+        // Try to find existing food first
+        const existingFood = this.foods.find(f => f.name.toLowerCase() === foodName.toLowerCase());
+        
+        if (existingFood) {
+            // Use existing food from database
+            try {
+                this.showLoading(true);
+                await this.api.addFoodToMeal(mealId, existingFood.id, quantityGrams);
+                await this.reloadMealPlan();
+            } catch (error) {
+                this.showError(`Failed to add food: ${error.message}`);
+            } finally {
+                this.showLoading(false);
+            }
+        } else {
+            // Add new food with nutritional data
+            await this.addNewFoodToMeal(mealId, foodName, quantityGrams);
         }
+    }
+
+    /**
+     * Add new food with nutritional data
+     */
+    async addNewFoodToMeal(mealId, foodName, quantityGrams) {
+        // Show nutritional data input form
+        const nutritionalData = await this.showNutritionalDataForm(foodName);
+        if (!nutritionalData) return;
 
         try {
             this.showLoading(true);
-            await this.api.addFoodToMeal(mealId, food.id, quantityGrams);
+            await this.api.addDirectFoodToMeal(mealId, foodName, quantityGrams, nutritionalData);
             await this.reloadMealPlan();
         } catch (error) {
             this.showError(`Failed to add food: ${error.message}`);
         } finally {
             this.showLoading(false);
         }
+    }
+
+    /**
+     * Show nutritional data input form
+     */
+    async showNutritionalDataForm(foodName) {
+        return new Promise((resolve) => {
+            // Create modal
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(0,0,0,0.5); display: flex; align-items: center;
+                justify-content: center; z-index: 1000;
+            `;
+            
+            modal.innerHTML = `
+                <div style="background: white; padding: 20px; border-radius: 8px; max-width: 400px; width: 90%;">
+                    <h3>Add "${foodName}" to Database</h3>
+                    <p>Enter nutritional information per 100g:</p>
+                    <div style="margin: 10px 0;">
+                        <label>Calories: <input type="number" id="calories" value="100" min="0" step="0.1"></label>
+                    </div>
+                    <div style="margin: 10px 0;">
+                        <label>Protein (g): <input type="number" id="protein" value="5" min="0" step="0.1"></label>
+                    </div>
+                    <div style="margin: 10px 0;">
+                        <label>Carbs (g): <input type="number" id="carbs" value="10" min="0" step="0.1"></label>
+                    </div>
+                    <div style="margin: 10px 0;">
+                        <label>Fat (g): <input type="number" id="fat" value="3" min="0" step="0.1"></label>
+                    </div>
+                    <div style="margin: 10px 0;">
+                        <label>Fiber (g): <input type="number" id="fiber" value="2" min="0" step="0.1"></label>
+                    </div>
+                    <div style="margin-top: 20px; text-align: right;">
+                        <button id="cancelBtn" style="margin-right: 10px; padding: 8px 16px;">Cancel</button>
+                        <button id="addBtn" style="background: #007bff; color: white; border: none; padding: 8px 16px; border-radius: 4px;">Add Food</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // Handle events
+            document.getElementById('cancelBtn').onclick = () => {
+                document.body.removeChild(modal);
+                resolve(null);
+            };
+            
+            document.getElementById('addBtn').onclick = () => {
+                const data = {
+                    calories_per_100g: parseFloat(document.getElementById('calories').value),
+                    protein_per_100g: parseFloat(document.getElementById('protein').value),
+                    carbs_per_100g: parseFloat(document.getElementById('carbs').value),
+                    fat_per_100g: parseFloat(document.getElementById('fat').value),
+                    fiber_per_100g: parseFloat(document.getElementById('fiber').value)
+                };
+                document.body.removeChild(modal);
+                resolve(data);
+            };
+        });
     }
 
     /**

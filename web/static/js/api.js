@@ -132,7 +132,7 @@ class NutritionistAPI {
     }
 
     /**
-     * Add a food item to a meal
+     * Add a food item to a meal (existing database food)
      */
     async addFoodToMeal(mealId, foodId, quantityGrams) {
         try {
@@ -150,6 +150,34 @@ class NutritionistAPI {
             return await this.handleError(response, 'add food to meal');
         } catch (error) {
             console.error('Error adding food to meal:', error);
+            throw new Error(`Failed to add food to meal: ${error.message}`);
+        }
+    }
+
+    /**
+     * Add a food item directly to a meal with nutritional data (auto-save to database)
+     */
+    async addDirectFoodToMeal(mealId, foodName, quantityGrams, nutritionalData) {
+        try {
+            const response = await fetch(`${this.baseURL}/api/meal-foods`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    meal_id: mealId,
+                    food_name: foodName,
+                    quantity_grams: quantityGrams,
+                    calories_per_100g: nutritionalData.calories_per_100g,
+                    protein_per_100g: nutritionalData.protein_per_100g,
+                    carbs_per_100g: nutritionalData.carbs_per_100g,
+                    fat_per_100g: nutritionalData.fat_per_100g,
+                    fiber_per_100g: nutritionalData.fiber_per_100g
+                })
+            });
+            return await this.handleError(response, 'add direct food to meal');
+        } catch (error) {
+            console.error('Error adding direct food to meal:', error);
             throw new Error(`Failed to add food to meal: ${error.message}`);
         }
     }

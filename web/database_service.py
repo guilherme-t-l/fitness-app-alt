@@ -320,6 +320,73 @@ class DatabaseService:
         except Exception as e:
             self._handle_supabase_error(e, f"add_food_to_meal({meal_id}, {food_id})")
     
+    def add_direct_food_to_meal(self, meal_id: str, food_name: str, quantity_grams: float,
+                               calories_per_100g: float, protein_per_100g: float, 
+                               carbs_per_100g: float, fat_per_100g: float, 
+                               fiber_per_100g: Optional[float] = None) -> MealFood:
+        """Add a food directly to a meal and auto-save to database."""
+        try:
+            # First, create the food in the database
+            food_data = {
+                "name": food_name,
+                "calories_per_100g": calories_per_100g,
+                "protein_per_100g": protein_per_100g,
+                "carbs_per_100g": carbs_per_100g,
+                "fat_per_100g": fat_per_100g,
+                "fiber_per_100g": fiber_per_100g,
+                "is_default": False
+            }
+            
+            food_response = self.supabase.table("foods").insert(food_data).execute()
+            
+            if not food_response.data:
+                raise DatabaseError("Failed to create food in database.")
+            
+            created_food = food_response.data[0]
+            food_id = created_food["id"]
+            
+            # Now add the food to the meal
+            meal_food_data = {
+                "meal_id": meal_id,
+                "food_id": food_id,
+                "quantity_grams": quantity_grams
+            }
+            
+            meal_food_response = self.supabase.table("meal_foods").insert(meal_food_data).execute()
+            
+            if not meal_food_response.data:
+                raise DatabaseError("Failed to add food to meal.")
+            
+            created_meal_food = meal_food_response.data[0]
+            
+            # Create the food object
+            food = Food(
+                id=created_food["id"],
+                name=created_food["name"],
+                calories_per_100g=created_food["calories_per_100g"],
+                protein_per_100g=created_food["protein_per_100g"],
+                carbs_per_100g=created_food["carbs_per_100g"],
+                fat_per_100g=created_food["fat_per_100g"],
+                fiber_per_100g=created_food.get("fiber_per_100g"),
+                is_default=created_food["is_default"]
+            )
+            
+            return MealFood(
+                id=created_meal_food["id"],
+                meal_id=created_meal_food["meal_id"],
+                food_id=created_meal_food["food_id"],
+                food_name=food_name,
+                quantity_grams=created_meal_food["quantity_grams"],
+                calories_per_100g=calories_per_100g,
+                protein_per_100g=protein_per_100g,
+                carbs_per_100g=carbs_per_100g,
+                fat_per_100g=fat_per_100g,
+                fiber_per_100g=fiber_per_100g,
+                food=food
+            )
+        except Exception as e:
+            self._handle_supabase_error(e, f"add_direct_food_to_meal({meal_id}, {food_name})")
+    
     def remove_food_from_meal(self, meal_food_id: str) -> None:
         """Remove a food item from a meal."""
         try:

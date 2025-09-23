@@ -43,14 +43,16 @@ Dynamic: summary
 
 # Nutritionist Co-Pilot App
 
-An AI-powered assistant that helps nutritionists create and modify meal plans through natural conversation. The AI understands nutrition context and can suggest food substitutions while maintaining macro balance.
+An AI-powered assistant that helps nutritionists create and modify meal plans through natural conversation. The AI understands nutrition context and can suggest food substitutions while maintaining macro balance. Features a complete database-driven meal planning system with real-time macro calculations and dynamic food management.
 
 ## How It Works
 
 1. **User chats** with an AI nutritionist in the left panel
 2. **AI responds** with both chat messages and meal plan updates
-3. **Meal plan panel** on the right updates automatically
-4. **AI can suggest** food substitutions, dietary adjustments, and macro modifications
+3. **Meal plan panel** on the right updates automatically with real-time macro calculations
+4. **Database-driven system** stores foods, meal plans, and nutritional data in Supabase
+5. **Dynamic meal management** - add/remove meals and foods through intuitive UI
+6. **AI can suggest** food substitutions, dietary adjustments, and macro modifications
 
 ## Project Structure
 
@@ -58,7 +60,16 @@ An AI-powered assistant that helps nutritionists create and modify meal plans th
 fitness-app-alt/
 ├── web/                           # Main application
 │   ├── app.py                    # 🔧 Flask server & API endpoints
+│   ├── database.py               # 🔧 Supabase client configuration
+│   ├── database_service.py       # 🔧 Database operations & error handling
+│   ├── models.py                 # 🔧 Data models (Food, Meal, MealPlan)
+│   ├── seed_data.py              # 🔧 Default food data & meal plans
+│   ├── setup_database.py         # 🔧 Database initialization script
+│   ├── schema.sql                # 🔧 Database schema definition
 │   ├── nutritionist_system_prompt.txt  # 🔧 AI personality/instructions
+│   ├── static/js/                # 🔧 Frontend JavaScript modules
+│   │   ├── api.js                # 🔧 API client for backend communication
+│   │   └── meal-plan.js          # 🔧 Meal plan UI management
 │   └── templates/
 │       └── index.html            # 🔧 Frontend UI (chat + meal plan panels)
 ├── llm_wrapper/                   # AI provider abstraction
@@ -66,17 +77,27 @@ fitness-app-alt/
 │   ├── config.py                 # 🔧 Configuration management
 │   └── providers/                # 🔧 AI providers (OpenAI, Anthropic)
 ├── requirements.txt              # Python dependencies
-└── deploy.sh                     # Deployment script
+├── deploy.sh                     # Deployment script
+└── .env                          # Environment variables (API keys, DB config)
 ```
 
 ## Key Files to Edit for Development
 
 ### **Frontend Changes**
 - `web/templates/index.html` - UI layout, styling, chat interface
+- `web/static/js/api.js` - API client for backend communication
+- `web/static/js/meal-plan.js` - Meal plan UI management and interactions
 
 ### **Backend Changes**
 - `web/app.py` - API endpoints, meal plan logic, chat handling
+- `web/database_service.py` - Database operations, CRUD methods, error handling
+- `web/models.py` - Data models and business logic
 - `web/nutritionist_system_prompt.txt` - AI behavior and responses
+
+### **Database Changes**
+- `web/schema.sql` - Database table definitions and relationships
+- `web/seed_data.py` - Default food data and initial meal plans
+- `web/setup_database.py` - Database initialization and seeding
 
 ### **AI Provider Changes**
 - `llm_wrapper/core.py` - Main AI wrapper functionality
@@ -84,25 +105,60 @@ fitness-app-alt/
 
 ## Quick Start
 
+### **Option 1: Automated Setup (Recommended)**
+```bash
+./deploy.sh
+```
+This script will:
+- Create virtual environment
+- Install all dependencies
+- Set up Supabase database
+- Seed with default foods and meal plans
+- Start the application
+
+### **Option 2: Manual Setup**
+
 1. **Install dependencies:**
    ```bash
    pip install -r requirements.txt
    ```
 
-2. **Set API key:**
+2. **Configure environment:**
+   Create `.env` file with:
    ```bash
-   export ANTHROPIC_API_KEY="your-api-key-here"
+   ANTHROPIC_API_KEY=your_anthropic_api_key_here
+   SUPABASE_URL=your_supabase_project_url_here
+   SUPABASE_ANON_KEY=your_supabase_anon_key_here
    ```
 
-3. **Run the app:**
+3. **Set up database:**
+   ```bash
+   python web/setup_database.py
+   ```
+
+4. **Run the app:**
    ```bash
    python web/app.py
    ```
 
-4. **Open browser:** `http://localhost:5000`
+5. **Open browser:** `http://localhost:5000` (or `http://localhost:5001` if port 5000 is in use)
 
 ## Example Usage
 
+### **Chat Interactions**
 - **"Replace chicken with a vegetarian option"** → AI suggests tofu/tempeh + updates meal plan
 - **"Make this dairy-free"** → AI identifies dairy items and suggests alternatives
 - **"Increase protein for muscle building"** → AI recommends protein-rich additions
+
+### **Meal Plan Management**
+- **Add meals** by clicking the "+ Add Meal" button
+- **Add foods** to meals by clicking "+ Add Food" in each meal section
+- **Edit quantities** by clicking on food items
+- **Delete items** using the delete buttons
+- **Real-time macros** update automatically as you modify the meal plan
+
+### **Database Features**
+- **Default foods** pre-loaded with nutritional data (per 100g)
+- **Persistent storage** - meal plans saved in Supabase
+- **Standardized units** - all quantities in grams for consistency
+- **Error handling** - detailed feedback for any issues
