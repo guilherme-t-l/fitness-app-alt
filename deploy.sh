@@ -1,7 +1,8 @@
 #!/bin/bash
 
-# LLM Wrapper Local Deployment Script
-# This script sets up and runs the LLM wrapper web application locally
+# Nutritionist Copilot Local Deployment Script
+# This script sets up and runs the nutritionist copilot web application locally
+# Features: AI-powered meal planning, database-driven food management, real-time macro calculations
 
 set -e  # Exit on any error
 
@@ -33,7 +34,7 @@ print_error() {
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-print_status "Starting LLM Wrapper deployment..."
+print_status "Starting Nutritionist Copilot deployment..."
 
 # Check if Python 3 is installed
 if ! command -v python3 &> /dev/null; then
@@ -86,25 +87,62 @@ if [ ! -f ".env" ]; then
 # Anthropic API Key (required)
 ANTHROPIC_API_KEY=your_anthropic_api_key_here
 
+# Supabase Configuration (required)
+SUPABASE_URL=your_supabase_project_url_here
+SUPABASE_ANON_KEY=your_supabase_anon_key_here
 
+# OpenAI API Key (optional)
+OPENAI_API_KEY=your_openai_api_key_here
 EOF
     print_warning "Please edit .env file and add your API keys before running the application."
     print_warning "You can get an Anthropic API key from: https://console.anthropic.com/"
+    print_warning "You can get Supabase credentials from: https://supabase.com/dashboard/project/evvatudtfojbmpgfwmrp"
     echo ""
-    read -p "Press Enter to continue after adding your API key to .env file..."
+    read -p "Press Enter to continue after adding your API keys to .env file..."
 fi
 
-# Check if API key is set
+# Check if required API keys are set
 if ! grep -q "ANTHROPIC_API_KEY=sk-" .env 2>/dev/null; then
     print_error "ANTHROPIC_API_KEY not properly set in .env file."
     print_error "Please edit .env file and add your Anthropic API key."
     exit 1
 fi
 
+if ! grep -q "SUPABASE_URL=https://" .env 2>/dev/null; then
+    print_error "SUPABASE_URL not properly set in .env file."
+    print_error "Please edit .env file and add your Supabase project URL."
+    exit 1
+fi
+
+if ! grep -q "SUPABASE_ANON_KEY=eyJ" .env 2>/dev/null; then
+    print_error "SUPABASE_ANON_KEY not properly set in .env file."
+    print_error "Please edit .env file and add your Supabase anon key."
+    exit 1
+fi
+
 print_success "Configuration validated"
+
+# Setup database (seed with default data)
+print_status "Setting up database..."
+if python web/setup_database.py; then
+    print_success "Database setup completed successfully"
+else
+    print_warning "Database setup failed or database already initialized"
+    print_warning "Continuing with application startup..."
+fi
 
 # Create logs directory if it doesn't exist
 mkdir -p logs
+
+# Kill any existing processes on port 5000
+print_status "Checking for existing processes on port 5000..."
+if lsof -t -i :5000 > /dev/null 2>&1; then
+    print_warning "Found existing processes on port 5000. Killing them..."
+    kill -9 $(lsof -t -i :5000) 2>/dev/null || true
+    print_success "Port 5000 cleared"
+else
+    print_status "Port 5000 is available"
+fi
 
 # Start the application
 print_status "Starting LLM Wrapper web application..."

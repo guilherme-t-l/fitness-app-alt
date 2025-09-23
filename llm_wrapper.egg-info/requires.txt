@@ -3,6 +3,7 @@ openai>=1.0.0
 flask>=2.0.0
 flask-cors>=3.0.0
 python-dotenv>=1.0.0
+supabase>=2.0.0
 
 [dev]
 pytest>=6.0

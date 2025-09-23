@@ -17,15 +17,28 @@ import sys
 import re
 from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS
+from dotenv import load_dotenv, find_dotenv
+
+# Find and load .env file from parent directory
+dotenv_path = find_dotenv()
+if dotenv_path:
+    load_dotenv(dotenv_path)
+else:
+    # Fallback: try to load from parent directory
+    parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    env_path = os.path.join(parent_dir, '.env')
+    if os.path.exists(env_path):
+        load_dotenv(env_path)
 
 # Add the parent directory to the path so we can import llm_wrapper
 # This allows us to import the custom LLM wrapper module from the parent directory
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from llm_wrapper import LLMWrapper, Config
+from database_service import DatabaseService, DatabaseError, FoodNotFoundError, MealPlanNotFoundError, MealNotFoundError, ValidationError
 
 # Initialize Flask application with CORS support
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static', static_url_path='/static')
 CORS(app)  # Enable Cross-Origin Resource Sharing for frontend integration
 
 # Initialize the LLM wrapper with configuration from environment variables
@@ -36,6 +49,13 @@ try:
 except ValueError as e:
     print(f"Configuration error: {e}")
     llm = None  # Set to None if configuration fails (e.g., missing API keys)
+
+# Initialize database service
+try:
+    db_service = DatabaseService()
+except Exception as e:
+    print(f"Database initialization error: {e}")
+    db_service = None
 
 def load_system_prompt():
     """
@@ -138,6 +158,291 @@ def get_models():
         return jsonify({'models': models})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+# Food API endpoints
+@app.route('/api/foods', methods=['GET'])
+def get_foods():
+    """Get all food items."""
+    if not db_service:
+        return jsonify({'error': 'Database service not initialized'}), 500
+    
+    try:
+        foods = db_service.get_all_foods()
+        return jsonify({
+            'foods': [
+                {
+                    'id': food.id,
+                    'name': food.name,
+                    'calories_per_100g': food.calories_per_100g,
+                    'protein_per_100g': food.protein_per_100g,
+                    'carbs_per_100g': food.carbs_per_100g,
+                    'fat_per_100g': food.fat_per_100g,
+                    'fiber_per_100g': food.fiber_per_100g,
+                    'is_default': food.is_default
+                }
+                for food in foods
+            ]
+        })
+    except DatabaseError as e:
+        return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
+
+
+@app.route('/api/foods/<food_id>', methods=['GET'])
+def get_food(food_id):
+    """Get a specific food item by ID."""
+    if not db_service:
+        return jsonify({'error': 'Database service not initialized'}), 500
+    
+    try:
+        food = db_service.get_food_by_id(food_id)
+        return jsonify({
+            'food': {
+                'id': food.id,
+                'name': food.name,
+                'calories_per_100g': food.calories_per_100g,
+                'protein_per_100g': food.protein_per_100g,
+                'carbs_per_100g': food.carbs_per_100g,
+                'fat_per_100g': food.fat_per_100g,
+                'fiber_per_100g': food.fiber_per_100g,
+                'is_default': food.is_default
+            }
+        })
+    except FoodNotFoundError as e:
+        return jsonify({'error': str(e)}), 404
+    except DatabaseError as e:
+        return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
+
+
+# Meal Plan API endpoints
+@app.route('/api/meal-plans/<meal_plan_id>', methods=['GET'])
+def get_meal_plan(meal_plan_id):
+    """Get a meal plan with all its meals and foods."""
+    if not db_service:
+        return jsonify({'error': 'Database service not initialized'}), 500
+    
+    try:
+        meal_plan = db_service.get_meal_plan_by_id(meal_plan_id)
+        return jsonify({
+            'meal_plan': {
+                'id': meal_plan.id,
+                'name': meal_plan.name,
+                'total_calories': meal_plan.total_calories,
+                'total_protein': meal_plan.total_protein,
+                'total_carbs': meal_plan.total_carbs,
+                'total_fat': meal_plan.total_fat,
+                'meals': [
+                    {
+                        'id': meal.id,
+                        'name': meal.name,
+                        'emoji': meal.emoji,
+                        'order_index': meal.order_index,
+                        'total_calories': meal.total_calories,
+                        'total_protein': meal.total_protein,
+                        'total_carbs': meal.total_carbs,
+                        'total_fat': meal.total_fat,
+                        'foods': [
+                            {
+                                'id': meal_food.id,
+                                'food_id': meal_food.food_id,
+                                'food_name': meal_food.food.name if meal_food.food else 'Unknown',
+                                'quantity_grams': meal_food.quantity_grams,
+                                'calories': meal_food.calories,
+                                'protein': meal_food.protein,
+                                'carbs': meal_food.carbs,
+                                'fat': meal_food.fat
+                            }
+                            for meal_food in meal.foods
+                        ]
+                    }
+                    for meal in meal_plan.meals
+                ]
+            }
+        })
+    except MealPlanNotFoundError as e:
+        return jsonify({'error': str(e)}), 404
+    except DatabaseError as e:
+        return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
+
+
+@app.route('/api/meal-plans', methods=['POST'])
+def create_meal_plan():
+    """Create a new meal plan."""
+    if not db_service:
+        return jsonify({'error': 'Database service not initialized'}), 500
+    
+    try:
+        data = request.get_json()
+        name = data.get('name', 'Today\'s Meal Plan')
+        
+        meal_plan = db_service.create_meal_plan(name)
+        return jsonify({
+            'meal_plan': {
+                'id': meal_plan.id,
+                'name': meal_plan.name,
+                'total_calories': meal_plan.total_calories,
+                'total_protein': meal_plan.total_protein,
+                'total_carbs': meal_plan.total_carbs,
+                'total_fat': meal_plan.total_fat,
+                'meals': []
+            }
+        }), 201
+    except ValidationError as e:
+        return jsonify({'error': str(e)}), 400
+    except DatabaseError as e:
+        return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
+
+
+# Meal API endpoints
+@app.route('/api/meals', methods=['POST'])
+def add_meal():
+    """Add a new meal to a meal plan."""
+    if not db_service:
+        return jsonify({'error': 'Database service not initialized'}), 500
+    
+    try:
+        data = request.get_json()
+        meal_plan_id = data.get('meal_plan_id')
+        name = data.get('name')
+        emoji = data.get('emoji', '🍽️')
+        
+        if not meal_plan_id or not name:
+            return jsonify({'error': 'meal_plan_id and name are required'}), 400
+        
+        meal = db_service.add_meal_to_plan(meal_plan_id, name, emoji)
+        return jsonify({
+            'meal': {
+                'id': meal.id,
+                'meal_plan_id': meal.meal_plan_id,
+                'name': meal.name,
+                'emoji': meal.emoji,
+                'order_index': meal.order_index,
+                'total_calories': meal.total_calories,
+                'total_protein': meal.total_protein,
+                'total_carbs': meal.total_carbs,
+                'total_fat': meal.total_fat,
+                'foods': []
+            }
+        }), 201
+    except ValidationError as e:
+        return jsonify({'error': str(e)}), 400
+    except DatabaseError as e:
+        return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
+
+
+@app.route('/api/meals/<meal_id>', methods=['DELETE'])
+def delete_meal(meal_id):
+    """Delete a meal and all its foods."""
+    if not db_service:
+        return jsonify({'error': 'Database service not initialized'}), 500
+    
+    try:
+        db_service.delete_meal(meal_id)
+        return jsonify({'message': 'Meal deleted successfully'}), 200
+    except MealNotFoundError as e:
+        return jsonify({'error': str(e)}), 404
+    except DatabaseError as e:
+        return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
+
+
+# Meal Food API endpoints
+@app.route('/api/meal-foods', methods=['POST'])
+def add_food_to_meal():
+    """Add a food item to a meal."""
+    if not db_service:
+        return jsonify({'error': 'Database service not initialized'}), 500
+    
+    try:
+        data = request.get_json()
+        meal_id = data.get('meal_id')
+        food_id = data.get('food_id')
+        quantity_grams = data.get('quantity_grams')
+        
+        if not all([meal_id, food_id, quantity_grams is not None]):
+            return jsonify({'error': 'meal_id, food_id, and quantity_grams are required'}), 400
+        
+        meal_food = db_service.add_food_to_meal(meal_id, food_id, quantity_grams)
+        return jsonify({
+            'meal_food': {
+                'id': meal_food.id,
+                'meal_id': meal_food.meal_id,
+                'food_id': meal_food.food_id,
+                'food_name': meal_food.food.name if meal_food.food else 'Unknown',
+                'quantity_grams': meal_food.quantity_grams,
+                'calories': meal_food.calories,
+                'protein': meal_food.protein,
+                'carbs': meal_food.carbs,
+                'fat': meal_food.fat
+            }
+        }), 201
+    except (FoodNotFoundError, ValidationError) as e:
+        return jsonify({'error': str(e)}), 400
+    except DatabaseError as e:
+        return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
+
+
+@app.route('/api/meal-foods/<meal_food_id>', methods=['PUT'])
+def update_food_quantity(meal_food_id):
+    """Update the quantity of a food item in a meal."""
+    if not db_service:
+        return jsonify({'error': 'Database service not initialized'}), 500
+    
+    try:
+        data = request.get_json()
+        quantity_grams = data.get('quantity_grams')
+        
+        if quantity_grams is None:
+            return jsonify({'error': 'quantity_grams is required'}), 400
+        
+        meal_food = db_service.update_food_quantity(meal_food_id, quantity_grams)
+        return jsonify({
+            'meal_food': {
+                'id': meal_food.id,
+                'meal_id': meal_food.meal_id,
+                'food_id': meal_food.food_id,
+                'food_name': meal_food.food.name if meal_food.food else 'Unknown',
+                'quantity_grams': meal_food.quantity_grams,
+                'calories': meal_food.calories,
+                'protein': meal_food.protein,
+                'carbs': meal_food.carbs,
+                'fat': meal_food.fat
+            }
+        })
+    except ValidationError as e:
+        return jsonify({'error': str(e)}), 400
+    except DatabaseError as e:
+        return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
+
+
+@app.route('/api/meal-foods/<meal_food_id>', methods=['DELETE'])
+def remove_food_from_meal(meal_food_id):
+    """Remove a food item from a meal."""
+    if not db_service:
+        return jsonify({'error': 'Database service not initialized'}), 500
+    
+    try:
+        db_service.remove_food_from_meal(meal_food_id)
+        return jsonify({'message': 'Food removed from meal successfully'}), 200
+    except DatabaseError as e:
+        return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
 
 
 @app.route('/api/nutritionist/chat', methods=['POST'])
