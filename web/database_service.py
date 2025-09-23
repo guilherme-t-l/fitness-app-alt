@@ -152,6 +152,53 @@ class DatabaseService:
         except Exception as e:
             self._handle_supabase_error(e, f"create_food({food.name})")
     
+    def update_food(self, food_id: str, calories_per_100g: float, protein_per_100g: float,
+                   carbs_per_100g: float, fat_per_100g: float, fiber_per_100g: Optional[float] = None) -> Food:
+        """Update food nutritional data in database."""
+        try:
+            print(f"Database update_food called with ID {food_id}: calories={calories_per_100g}, protein={protein_per_100g}, carbs={carbs_per_100g}, fat={fat_per_100g}")
+            
+            # Validate input values
+            if any(val < 0 for val in [calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g]):
+                raise ValidationError("Nutritional values cannot be negative")
+            
+            if fiber_per_100g is not None and fiber_per_100g < 0:
+                raise ValidationError("Fiber value cannot be negative")
+            
+            # Update the food
+            update_data = {
+                "calories_per_100g": calories_per_100g,
+                "protein_per_100g": protein_per_100g,
+                "carbs_per_100g": carbs_per_100g,
+                "fat_per_100g": fat_per_100g
+            }
+            
+            if fiber_per_100g is not None:
+                update_data["fiber_per_100g"] = fiber_per_100g
+            
+            response = self.supabase.table("foods").update(update_data).eq("id", food_id).execute()
+            
+            if not response.data:
+                raise FoodNotFoundError(f"Food with ID {food_id} not found or could not be updated.")
+            
+            updated_item = response.data[0]
+            return Food(
+                id=updated_item["id"],
+                name=updated_item["name"],
+                calories_per_100g=updated_item["calories_per_100g"],
+                protein_per_100g=updated_item["protein_per_100g"],
+                carbs_per_100g=updated_item["carbs_per_100g"],
+                fat_per_100g=updated_item["fat_per_100g"],
+                fiber_per_100g=updated_item.get("fiber_per_100g"),
+                is_default=updated_item["is_default"],
+                created_at=self._parse_datetime(updated_item["created_at"]),
+                updated_at=self._parse_datetime(updated_item["updated_at"])
+            )
+        except (FoodNotFoundError, ValidationError):
+            raise
+        except Exception as e:
+            self._handle_supabase_error(e, f"update_food({food_id})")
+    
     # Meal Plan operations
     def get_meal_plan_by_id(self, meal_plan_id: str) -> MealPlan:
         """Get a meal plan with all its meals and foods."""

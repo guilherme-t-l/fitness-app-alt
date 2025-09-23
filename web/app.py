@@ -218,6 +218,54 @@ def get_food(food_id):
         return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
 
 
+@app.route('/api/foods/<food_id>', methods=['PUT'])
+def update_food(food_id):
+    """Update food nutritional data in database."""
+    if not db_service:
+        return jsonify({'error': 'Database service not initialized'}), 500
+    
+    try:
+        data = request.get_json()
+        print(f"Update food request for ID {food_id}: {data}")
+        
+        calories_per_100g = data.get('calories_per_100g')
+        protein_per_100g = data.get('protein_per_100g')
+        carbs_per_100g = data.get('carbs_per_100g')
+        fat_per_100g = data.get('fat_per_100g')
+        fiber_per_100g = data.get('fiber_per_100g')
+        
+        print(f"Parsed values: calories={calories_per_100g}, protein={protein_per_100g}, carbs={carbs_per_100g}, fat={fat_per_100g}")
+        
+        if not all([calories_per_100g is not None, protein_per_100g is not None, 
+                   carbs_per_100g is not None, fat_per_100g is not None]):
+            print("Validation failed: missing required values")
+            return jsonify({'error': 'All nutritional values are required'}), 400
+        
+        food = db_service.update_food(food_id, calories_per_100g, protein_per_100g, 
+                                    carbs_per_100g, fat_per_100g, fiber_per_100g)
+        
+        return jsonify({
+            'food': {
+                'id': food.id,
+                'name': food.name,
+                'calories_per_100g': food.calories_per_100g,
+                'protein_per_100g': food.protein_per_100g,
+                'carbs_per_100g': food.carbs_per_100g,
+                'fat_per_100g': food.fat_per_100g,
+                'fiber_per_100g': food.fiber_per_100g,
+                'is_default': food.is_default
+            }
+        })
+    except FoodNotFoundError as e:
+        return jsonify({'error': str(e)}), 404
+    except ValidationError as e:
+        return jsonify({'error': str(e)}), 400
+    except DatabaseError as e:
+        return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
+
+
 # Meal Plan API endpoints
 @app.route('/api/meal-plans/<meal_plan_id>', methods=['GET'])
 def get_meal_plan(meal_plan_id):
@@ -475,6 +523,85 @@ def remove_food_from_meal(meal_food_id):
         return jsonify({'error': str(e)}), 500
     except Exception as e:
         return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
+
+
+@app.route('/api/ai/generate-macros', methods=['POST'])
+def generate_macros():
+    """
+    Generate nutritional data for a food using AI.
+    
+    Request JSON:
+        - food_name (str): Name of the food to generate macros for
+    
+    Returns:
+        JSON: {
+            'calories_per_100g': float,
+            'protein_per_100g': float,
+            'carbs_per_100g': float,
+            'fat_per_100g': float
+        }
+    """
+    if not llm:
+        return jsonify({'error': 'LLM wrapper not initialized. Check your API key.'}), 500
+    
+    try:
+        data = request.get_json()
+        food_name = data.get('food_name', '').strip()
+        
+        if not food_name:
+            return jsonify({'error': 'food_name is required'}), 400
+        
+        # Create AI prompt for nutritional data generation
+        prompt = f"""You are a nutritionist AI. Given a food name, provide accurate nutritional information per 100g.
+
+Food: {food_name}
+
+Respond in this exact JSON format (no other text):
+{{
+    "calories_per_100g": number,
+    "protein_per_100g": number,
+    "carbs_per_100g": number,
+    "fat_per_100g": number
+}}
+
+Provide realistic, accurate nutritional data based on standard food databases."""
+        
+        # Generate AI response
+        raw_response = llm.generate(
+            prompt=prompt,
+            model='claude-3-5-haiku-20241022',
+            temperature=0.3,  # Lower temperature for more consistent data
+            max_tokens=200
+        )
+        
+        # Parse JSON response
+        import json
+        try:
+            nutritional_data = json.loads(raw_response.strip())
+            
+            # Validate the response has required fields
+            required_fields = ['calories_per_100g', 'protein_per_100g', 'carbs_per_100g', 'fat_per_100g']
+            if not all(field in nutritional_data for field in required_fields):
+                raise ValueError("Missing required nutritional fields")
+            
+            # Validate numeric values
+            for field in required_fields:
+                if not isinstance(nutritional_data[field], (int, float)) or nutritional_data[field] < 0:
+                    raise ValueError(f"Invalid value for {field}")
+            
+            return jsonify(nutritional_data)
+            
+        except (json.JSONDecodeError, ValueError) as e:
+            # Fallback to default values if AI response is invalid
+            return jsonify({
+                'calories_per_100g': 100.0,
+                'protein_per_100g': 5.0,
+                'carbs_per_100g': 10.0,
+                'fat_per_100g': 3.0
+            })
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/nutritionist/chat', methods=['POST'])

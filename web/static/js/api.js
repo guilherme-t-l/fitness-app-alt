@@ -171,8 +171,7 @@ class NutritionistAPI {
                     calories_per_100g: nutritionalData.calories_per_100g,
                     protein_per_100g: nutritionalData.protein_per_100g,
                     carbs_per_100g: nutritionalData.carbs_per_100g,
-                    fat_per_100g: nutritionalData.fat_per_100g,
-                    fiber_per_100g: nutritionalData.fiber_per_100g
+                    fat_per_100g: nutritionalData.fat_per_100g
                 })
             });
             return await this.handleError(response, 'add direct food to meal');
@@ -228,6 +227,52 @@ class NutritionistAPI {
         } catch (error) {
             console.error('Error loading models:', error);
             throw new Error(`Failed to load models: ${error.message}`);
+        }
+    }
+
+    /**
+     * Generate nutritional data for a food using AI
+     */
+    async generateMacros(foodName) {
+        try {
+            const response = await fetch(`${this.baseURL}/api/ai/generate-macros`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    food_name: foodName
+                })
+            });
+            return await this.handleError(response, 'generate macros');
+        } catch (error) {
+            console.error('Error generating macros:', error);
+            throw new Error(`Failed to generate macros: ${error.message}`);
+        }
+    }
+
+    /**
+     * Update food nutritional data in database
+     */
+    async updateFood(foodId, nutritionalData) {
+        try {
+            console.log('API updateFood called with:', { foodId, nutritionalData });
+            
+            const response = await fetch(`${this.baseURL}/api/foods/${foodId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(nutritionalData)
+            });
+            
+            console.log('API response status:', response.status);
+            console.log('API response ok:', response.ok);
+            
+            return await this.handleError(response, 'update food');
+        } catch (error) {
+            console.error('Error updating food:', error);
+            throw new Error(`Failed to update food: ${error.message}`);
         }
     }
 
