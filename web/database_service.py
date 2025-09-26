@@ -264,6 +264,26 @@ class DatabaseService:
         except Exception as e:
             self._handle_supabase_error(e, f"get_meal_plan_by_id({meal_plan_id})")
     
+    def get_all_meal_plans(self) -> List[MealPlan]:
+        """Get all meal plans (without full meal details for performance)."""
+        try:
+            response = self.supabase.table("meal_plans").select("id, name, created_at, updated_at").order("created_at", desc=True).execute()
+            
+            meal_plans = []
+            for meal_plan_data in response.data:
+                meal_plan = MealPlan(
+                    id=meal_plan_data["id"],
+                    name=meal_plan_data["name"],
+                    created_at=self._parse_datetime(meal_plan_data["created_at"]),
+                    updated_at=self._parse_datetime(meal_plan_data["updated_at"]),
+                    meals=[]  # Empty for performance - use get_meal_plan_by_id for full details
+                )
+                meal_plans.append(meal_plan)
+            
+            return meal_plans
+        except Exception as e:
+            self._handle_supabase_error(e, "get_all_meal_plans()")
+    
     def create_meal_plan(self, name: str = "Today's Meal Plan") -> MealPlan:
         """Create a new meal plan."""
         try:

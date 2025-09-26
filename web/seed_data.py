@@ -122,18 +122,22 @@ def seed_database():
                     print(f"❌ Failed to create food '{food.name}': {str(e)}")
         
         # Check if default meal plan already exists
+        print("🍽️  Checking for existing meal plans...")
         try:
-            # Try to get a meal plan (assuming there's only one for now)
-            # This is a simplified check - in production you'd want a more robust approach
-            print("🍽️  Checking for existing meal plans...")
-            # For now, we'll always create a new meal plan
-            # In the future, you might want to check if one exists first
-        except:
-            pass
-        
-        print("🍽️  Creating default meal plan...")
-        meal_plan_id = create_default_meal_plan(db_service)
-        print(f"✅ Created default meal plan with ID: {meal_plan_id}")
+            # Try to get existing meal plans
+            existing_plans = db_service.get_all_meal_plans()
+            if existing_plans and len(existing_plans) > 0:
+                print(f"⚠️  Found {len(existing_plans)} existing meal plans. Skipping meal plan creation.")
+                meal_plan_id = existing_plans[0].id  # Use the first existing plan
+            else:
+                print("🍽️  Creating default meal plan...")
+                meal_plan_id = create_default_meal_plan(db_service)
+                print(f"✅ Created default meal plan with ID: {meal_plan_id}")
+        except Exception as e:
+            print(f"⚠️  Could not check for existing meal plans: {str(e)}")
+            print("🍽️  Creating default meal plan...")
+            meal_plan_id = create_default_meal_plan(db_service)
+            print(f"✅ Created default meal plan with ID: {meal_plan_id}")
         
         print("🎉 Database seeding completed successfully!")
         return meal_plan_id

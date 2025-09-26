@@ -34,6 +34,27 @@ print_error() {
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
+# Parse command line arguments
+FORCE_SEED=false
+for arg in "$@"; do
+    case $arg in
+        --force-seed)
+            FORCE_SEED=true
+            shift
+            ;;
+        --help)
+            echo "Usage: $0 [--force-seed] [--help]"
+            echo "  --force-seed    Force database re-seeding even if data exists"
+            echo "  --help          Show this help message"
+            exit 0
+            ;;
+        *)
+            print_warning "Unknown argument: $arg"
+            print_warning "Use --help for usage information"
+            ;;
+    esac
+done
+
 print_status "Starting Nutritionist Copilot deployment..."
 
 # Check if Python 3 is installed
@@ -122,13 +143,28 @@ fi
 
 print_success "Configuration validated"
 
-# Setup database (seed with default data)
-print_status "Setting up database..."
-if python web/setup_database.py; then
-    print_success "Database setup completed successfully"
+# Setup database (only if empty or force-seed is specified)
+if [ "$FORCE_SEED" = true ]; then
+    print_status "Force seeding enabled - setting up database with default data..."
+    if python web/setup_database.py; then
+        print_success "Database setup completed successfully"
+    else
+        print_warning "Database setup failed"
+        print_warning "Continuing with application startup..."
+    fi
 else
-    print_warning "Database setup failed or database already initialized"
-    print_warning "Continuing with application startup..."
+    print_status "Checking database status..."
+    if python web/check_database.py; then
+        print_success "Database is ready"
+    else
+        print_status "Database is empty, setting up with default data..."
+        if python web/setup_database.py; then
+            print_success "Database setup completed successfully"
+        else
+            print_warning "Database setup failed"
+            print_warning "Continuing with application startup..."
+        fi
+    fi
 fi
 
 # Create logs directory if it doesn't exist
