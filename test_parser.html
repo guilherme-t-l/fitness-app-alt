@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Parser Test</title>
+</head>
+<body>
+    <h1>Suggestion Parser Test</h1>
+    <div id="output"></div>
+    
+    <script src="/static/js/suggestion-parser.js"></script>
+    <script>
+        // Test with the format from the image
+        const testText = `Updated Breakfast
+Total: 638 kcal | 62g carbs | 42g protein | 28g fat
+
+2 Large Eggs (100g): 143 kcal | 1g C | 13g P | 10g F
+2 Bacon Strips (30g): 90 kcal | 0g C | 6g P | 7g F
+Whole Wheat Toast (2 slices, 60g): 160 kcal | 30g C | 8g P | 2g F
+Greek Yogurt (100g): 65 kcal | 3g C | 10g P | 0g F
+Mixed Berries (50g): 21 kcal | 5g C | 0.5g P | 0g F
+Granola (30g): 132 kcal | 14g C | 4g P | 7g F
+Honey (10g): 30 kcal | 8g C | 0g P | 0g F
+
+Modifications:
+- Reduced Greek Yogurt portion
+- Reduced Granola portion
+- Added eggs, bacon, and whole wheat toast
+- Maintained overall nutritional balance`;
+
+        const parser = new SuggestionParser();
+        const result = parser.parseSuggestion(testText);
+        
+        document.getElementById('output').innerHTML = '<pre>' + JSON.stringify(result, null, 2) + '</pre>';
+        console.log('Test result:', result);
+    </script>
+</body>
+</html>

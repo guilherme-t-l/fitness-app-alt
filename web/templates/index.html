@@ -6,6 +6,9 @@
     <title>Nutritionist Copilot</title>
     <script src="/static/js/api.js"></script>
     <script src="/static/js/meal-plan.js"></script>
+    <script src="/static/js/suggestion-parser.js"></script>
+    <script src="/static/js/suggestion-applier.js"></script>
+    <script src="/static/js/suggestion-ui.js"></script>
     <style>
         * {
             margin: 0;
@@ -424,9 +427,215 @@
         .settings.hidden {
             display: none;
         }
+
+        /* AI Suggestion Styles */
+        .ai-suggestion-container {
+            background: linear-gradient(135deg, #e8f5e8 0%, #f0f8f0 100%);
+            border: 2px solid #4CAF50;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.2);
+            overflow: hidden;
+            animation: slideInFromTop 0.5s ease-out;
+        }
+
+        .ai-suggestion-header {
+            background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
+            color: white;
+            padding: 15px 20px;
+            border-bottom: 1px solid #388E3C;
+        }
+
+        .ai-suggestion-title {
+            display: flex;
+            align-items: center;
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+        }
+
+        .ai-icon {
+            font-size: 1.2rem;
+            margin-right: 8px;
+        }
+
+        .ai-suggestion-trigger {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            font-style: italic;
+        }
+
+        .ai-suggestion-content {
+            padding: 20px;
+        }
+
+        .ai-change-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            margin: 8px 0;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+            transition: all 0.2s ease;
+        }
+
+        .ai-change-item:hover {
+            background: #e9ecef;
+            transform: translateX(4px);
+        }
+
+        .change-icon {
+            font-size: 20px;
+            margin-right: 12px;
+            min-width: 24px;
+        }
+
+        .change-content {
+            flex: 1;
+        }
+
+        .change-description {
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .change-details {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .change-actions {
+            margin-left: 12px;
+        }
+
+        .ai-suggestion-actions {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .btn-apply-all, .btn-apply-single, .btn-dismiss {
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .btn-apply-all {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+        }
+
+        .btn-apply-all:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        }
+
+        .btn-apply-single {
+            background: #007bff;
+            color: white;
+            padding: 8px 16px;
+            font-size: 12px;
+        }
+
+        .btn-apply-single:hover:not(:disabled) {
+            background: #0056b3;
+            transform: translateY(-1px);
+        }
+
+        .btn-dismiss {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-dismiss:hover:not(:disabled) {
+            background: #5a6268;
+        }
+
+        .btn-apply-all:disabled, .btn-apply-single:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .confidence-badge {
+            background: #28a745;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            margin-left: 8px;
+        }
+
+        @keyframes slideInFromTop {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Undo functionality styles */
+        .undo-controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+
+        .undo-controls.hidden {
+            display: none;
+        }
+
+        .undo-btn {
+            background: #ffc107;
+            color: #212529;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 0 2px;
+            transition: all 0.2s ease;
+        }
+
+        .undo-btn:hover:not(:disabled) {
+            background: #e0a800;
+            transform: translateY(-1px);
+        }
+
+        .undo-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
+    <!-- Undo Controls -->
+    <div class="undo-controls hidden" id="undoControls">
+        <div style="font-size: 12px; font-weight: 600; margin-bottom: 8px; color: #333;">Undo Changes</div>
+        <button class="undo-btn" id="undoLastBtn" onclick="suggestionUI.undoLastChange()">↶ Undo Last</button>
+        <button class="undo-btn" id="undoAllBtn" onclick="suggestionUI.undoAllChanges()">↶ Undo All</button>
+        <button class="undo-btn" id="clearHistoryBtn" onclick="suggestionUI.clearHistory()">🗑️ Clear</button>
+    </div>
+
     <div class="main-container">
         <!-- Chat Section (Left Panel - 60%) -->
         <div class="chat-section">
@@ -606,13 +815,16 @@
                 if (response.error) {
                     addMessage('Error: ' + response.error, 'bot', true);
                 } else {
-                    // Display chat content in the chat area
-                    addMessage(response.chat, 'bot');
-                    
-                    // Update meal plan section if meal_plan content is provided
-                    if (response.meal_plan && response.meal_plan.trim()) {
-                        updateMealPlanFromAI(response.meal_plan);
-                    }
+                // Display chat content in the chat area
+                addMessage(response.chat, 'bot');
+                
+                // Update meal plan section if meal_plan content is provided
+                if (response.meal_plan && response.meal_plan.trim()) {
+                    console.log('AI provided meal plan content:', response.meal_plan);
+                    updateMealPlanFromAI(response.meal_plan);
+                } else {
+                    console.log('No meal plan content in AI response');
+                }
                 }
             } catch (error) {
                 console.error('Error:', error);
@@ -660,7 +872,35 @@
 
         // Function to update meal plan from AI response
         function updateMealPlanFromAI(mealPlanText) {
-            // Create a temporary div to display the AI's meal plan suggestions
+            // Always use the new suggestion system
+            if (window.suggestionUI) {
+                const suggestionId = window.suggestionUI.renderSuggestions(mealPlanText);
+                if (suggestionId) {
+                    // Show undo controls if there are changes to undo
+                    updateUndoControls();
+                    
+                    // Scroll to the meal plan section to show the update
+                    document.querySelector('.meal-plan-container').scrollTop = 0;
+                } else {
+                    console.warn('Failed to render suggestion, using fallback display');
+                    showFallbackSuggestion(mealPlanText);
+                }
+            } else {
+                console.warn('Suggestion system not initialized, trying to initialize now...');
+                // Try to initialize the suggestion system now
+                initializeSuggestionSystem();
+                
+                if (window.suggestionUI) {
+                    updateMealPlanFromAI(mealPlanText); // Retry
+                } else {
+                    console.warn('Still failed to initialize, using fallback display');
+                    showFallbackSuggestion(mealPlanText);
+                }
+            }
+        }
+
+        // Fallback function for displaying suggestions as plain text
+        function showFallbackSuggestion(mealPlanText) {
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = `
                 <div class="meal-section" style="background: #e8f5e8; border-left: 4px solid #4CAF50;">
@@ -674,16 +914,57 @@
                 </div>
             `;
             
-            // Insert the AI suggestions at the top of the meal plan container
             const mealsContainer = document.getElementById('mealsContainer');
             mealsContainer.insertBefore(tempDiv.firstElementChild, mealsContainer.firstChild);
-            
-            // Scroll to the meal plan section to show the update
             document.querySelector('.meal-plan-container').scrollTop = 0;
+        }
+
+        // Function to update undo controls visibility
+        function updateUndoControls() {
+            const undoControls = document.getElementById('undoControls');
+            if (window.suggestionUI && window.suggestionUI.applier) {
+                const hasChanges = window.suggestionUI.applier.getUndoStackLength() > 0;
+                if (hasChanges) {
+                    undoControls.classList.remove('hidden');
+                } else {
+                    undoControls.classList.add('hidden');
+                }
+            }
         }
 
         // Event listeners for dynamic functionality
         addMealBtn.addEventListener('click', () => mealPlanManager.addNewMeal());
+
+        // Initialize suggestion system
+        let suggestionParser, suggestionApplier, suggestionUI;
+        
+        function initializeSuggestionSystem() {
+            if (!window.nutritionistAPI || !window.mealPlanManager) {
+                console.error('Required dependencies not available for suggestion system');
+                return;
+            }
+            
+            suggestionParser = new SuggestionParser();
+            suggestionApplier = new SuggestionApplier(window.nutritionistAPI, window.mealPlanManager);
+            suggestionUI = new SuggestionUI(suggestionParser, suggestionApplier, window.mealPlanManager);
+            
+            // Make suggestionUI globally available for onclick handlers
+            window.suggestionUI = suggestionUI;
+            
+            console.log('Suggestion system initialized successfully');
+        }
+
+        // Initialize suggestion system when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeSuggestionSystem();
+        });
+
+        // Also try to initialize after a short delay to ensure all components are loaded
+        setTimeout(() => {
+            if (!window.suggestionUI) {
+                initializeSuggestionSystem();
+            }
+        }, 1000);
     </script>
 </body>
 </html>
