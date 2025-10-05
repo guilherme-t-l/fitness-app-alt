@@ -923,20 +923,6 @@ class MealPlanManager {
     getCurrentMealPlanContext() {
         return window.currentMealPlanContext || "";
     }
-
-    /**
-     * Get current meal plan object
-     */
-    getCurrentMealPlan() {
-        return this.currentMealPlan;
-    }
-
-    /**
-     * Get foods database
-     */
-    getFoods() {
-        return this.foods;
-    }
 }
 
 // Create global meal plan manager instance
