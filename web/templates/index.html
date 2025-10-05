@@ -424,6 +424,207 @@
         .settings.hidden {
             display: none;
         }
+
+        /* Tab Navigation Styles */
+        .tab-navigation {
+            display: flex;
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 4px;
+            margin: 20px 0;
+            gap: 4px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 12px 16px;
+            border: none;
+            background: transparent;
+            color: #6c757d;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .tab-btn.active {
+            background: #4CAF50;
+            color: white;
+            box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+        }
+
+        .tab-btn:hover:not(.active) {
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* AI Suggestions Styles */
+        .suggestion-card {
+            background: white;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+
+        .suggestion-card:hover {
+            border-color: #4CAF50;
+            box-shadow: 0 4px 16px rgba(76, 175, 80, 0.2);
+        }
+
+        .suggestion-header {
+            background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
+            color: white;
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .suggestion-title {
+            font-weight: 600;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .suggestion-meal {
+            font-size: 12px;
+            opacity: 0.9;
+            background: rgba(255,255,255,0.2);
+            padding: 4px 8px;
+            border-radius: 12px;
+        }
+
+        .suggestion-body {
+            padding: 20px;
+        }
+
+        .suggestion-food {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .suggestion-food:last-child {
+            margin-bottom: 0;
+        }
+
+        .food-info {
+            flex: 1;
+        }
+
+        .food-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .food-quantity {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .food-macros {
+            text-align: right;
+            margin-right: 16px;
+        }
+
+        .macro-calories {
+            font-weight: 600;
+            color: #4CAF50;
+            font-size: 16px;
+        }
+
+        .macro-details {
+            font-size: 12px;
+            color: #666;
+            margin-top: 2px;
+        }
+
+        .suggestion-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #f8f9fa;
+        }
+
+        .suggestion-btn {
+            flex: 1;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .suggestion-btn.accept {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .suggestion-btn.accept:hover {
+            background: #2E7D32;
+            transform: translateY(-1px);
+        }
+
+        .suggestion-btn.reject {
+            background: #dc3545;
+            color: white;
+        }
+
+        .suggestion-btn.reject:hover {
+            background: #c82333;
+            transform: translateY(-1px);
+        }
+
+        .suggestion-btn.dismiss {
+            background: #6c757d;
+            color: white;
+        }
+
+        .suggestion-btn.dismiss:hover {
+            background: #5a6268;
+            transform: translateY(-1px);
+        }
+
+        /* Loading state for suggestions */
+        .suggestion-loading {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+        }
+
+        .suggestion-loading .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4CAF50;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -503,13 +704,36 @@
                     </div>
                 </div>
 
-                <!-- Meals Container -->
-                <div id="mealsContainer">
-                    <!-- Meals will be dynamically loaded here -->
+                <!-- Tab Navigation -->
+                <div class="tab-navigation">
+                    <button class="tab-btn active" id="mealsTab">📋 Meals</button>
+                    <button class="tab-btn" id="suggestionsTab">🤖 AI Suggestions</button>
                 </div>
 
-                <!-- Add New Meal Button -->
-                <button class="add-meal-btn" id="addMealBtn">+ Add New Meal</button>
+                <!-- Meals Tab Content -->
+                <div class="tab-content active" id="mealsTabContent">
+                    <!-- Meals Container -->
+                    <div id="mealsContainer">
+                        <!-- Meals will be dynamically loaded here -->
+                    </div>
+
+                    <!-- Add New Meal Button -->
+                    <button class="add-meal-btn" id="addMealBtn">+ Add New Meal</button>
+                </div>
+
+                <!-- AI Suggestions Tab Content -->
+                <div class="tab-content" id="suggestionsTabContent">
+                    <div id="suggestionsContainer">
+                        <!-- AI suggestions will be displayed here -->
+                        <div class="no-suggestions" id="noSuggestions">
+                            <div style="text-align: center; padding: 40px 20px; color: #666;">
+                                <div style="font-size: 48px; margin-bottom: 16px;">🤖</div>
+                                <h3 style="margin-bottom: 8px; color: #333;">No AI Suggestions Yet</h3>
+                                <p style="margin: 0; font-size: 14px;">Start a conversation with the AI to get personalized food suggestions!</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -537,6 +761,14 @@
         const totalCarbs = document.getElementById('totalCarbs');
         const totalProtein = document.getElementById('totalProtein');
         const totalFat = document.getElementById('totalFat');
+
+        // Tab elements
+        const mealsTab = document.getElementById('mealsTab');
+        const suggestionsTab = document.getElementById('suggestionsTab');
+        const mealsTabContent = document.getElementById('mealsTabContent');
+        const suggestionsTabContent = document.getElementById('suggestionsTabContent');
+        const suggestionsContainer = document.getElementById('suggestionsContainer');
+        const noSuggestions = document.getElementById('noSuggestions');
 
         // Meal plan is now managed by MealPlanManager
 
@@ -608,6 +840,17 @@
                 } else {
                     // Display chat content in the chat area
                     addMessage(response.chat, 'bot');
+                    
+                    // Check if AI response contains food suggestions
+                    if (aiSuggestionsManager && response.chat) {
+                        const suggestions = aiSuggestionsManager.parseAIResponse(response.chat);
+                        if (suggestions.length > 0) {
+                            // Add suggestions to the AI suggestions manager
+                            suggestions.forEach(async (suggestion) => {
+                                await aiSuggestionsManager.addSuggestion(suggestion);
+                            });
+                        }
+                    }
                     
                     // Update meal plan section if meal_plan content is provided
                     if (response.meal_plan && response.meal_plan.trim()) {
@@ -681,6 +924,29 @@
             // Scroll to the meal plan section to show the update
             document.querySelector('.meal-plan-container').scrollTop = 0;
         }
+
+        // Tab switching functionality
+        function switchTab(tabName) {
+            try {
+                // Update tab buttons
+                document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                
+                if (tabName === 'meals') {
+                    if (mealsTab) mealsTab.classList.add('active');
+                    if (mealsTabContent) mealsTabContent.classList.add('active');
+                } else if (tabName === 'suggestions') {
+                    if (suggestionsTab) suggestionsTab.classList.add('active');
+                    if (suggestionsTabContent) suggestionsTabContent.classList.add('active');
+                }
+            } catch (error) {
+                console.error('Error switching tabs:', error);
+            }
+        }
+
+        // Tab event listeners
+        mealsTab.addEventListener('click', () => switchTab('meals'));
+        suggestionsTab.addEventListener('click', () => switchTab('suggestions'));
 
         // Event listeners for dynamic functionality
         addMealBtn.addEventListener('click', () => mealPlanManager.addNewMeal());

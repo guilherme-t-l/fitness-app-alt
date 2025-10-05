@@ -925,6 +925,461 @@ class MealPlanManager {
     }
 }
 
+/**
+ * AI Suggestions Manager
+ * Handles AI-generated food suggestions and user interactions
+ */
+class AISuggestionsManager {
+    constructor(api, mealPlanManager) {
+        this.api = api;
+        this.mealPlanManager = mealPlanManager;
+        this.suggestions = [];
+        this.suggestionIdCounter = 0;
+    }
+
+    /**
+     * Add a new AI suggestion
+     */
+    async addSuggestion(suggestionData) {
+        const suggestion = {
+            id: ++this.suggestionIdCounter,
+            title: suggestionData.title || 'AI Suggestion',
+            mealName: suggestionData.mealName || 'Unknown Meal',
+            foods: suggestionData.foods || [],
+            timestamp: new Date(),
+            status: 'pending' // pending, accepted, rejected, dismissed
+        };
+
+        // Generate macros for foods that don't have them
+        await this.generateMacrosForSuggestion(suggestion);
+
+        this.suggestions.push(suggestion);
+        this.renderSuggestions();
+        this.updateSuggestionsTabBadge();
+        this.showSuggestionsTab();
+        return suggestion;
+    }
+
+    /**
+     * Generate macros for foods in a suggestion
+     */
+    async generateMacrosForSuggestion(suggestion) {
+        for (const food of suggestion.foods) {
+            // Only generate if macros are not already set
+            if (food.macros.calories === 0) {
+                try {
+                    // Check if food exists in database first
+                    const existingFood = this.mealPlanManager.foods.find(
+                        f => f.name.toLowerCase() === food.name.toLowerCase()
+                    );
+
+                    if (existingFood) {
+                        // Use database macros
+                        food.macros = {
+                            calories: (existingFood.calories_per_100g / 100) * food.quantity,
+                            protein: (existingFood.protein_per_100g / 100) * food.quantity,
+                            carbs: (existingFood.carbs_per_100g / 100) * food.quantity,
+                            fat: (existingFood.fat_per_100g / 100) * food.quantity
+                        };
+                    } else {
+                        // Generate macros using AI
+                        const nutritionalData = await this.api.generateMacros(food.name);
+                        food.macros = {
+                            calories: (nutritionalData.calories_per_100g / 100) * food.quantity,
+                            protein: (nutritionalData.protein_per_100g / 100) * food.quantity,
+                            carbs: (nutritionalData.carbs_per_100g / 100) * food.quantity,
+                            fat: (nutritionalData.fat_per_100g / 100) * food.quantity
+                        };
+                    }
+                } catch (error) {
+                    console.error(`Failed to generate macros for ${food.name}:`, error);
+                    // Keep default values if generation fails
+                }
+            }
+        }
+    }
+
+    /**
+     * Parse AI response for food suggestions
+     */
+    parseAIResponse(aiResponse) {
+        const suggestions = [];
+        
+        // Only create suggestions if the AI is actually suggesting foods
+        const suggestionKeywords = ['add', 'suggest', 'recommend', 'try', 'include', 'consider', 'incorporate'];
+        const hasSuggestionKeywords = suggestionKeywords.some(keyword => 
+            aiResponse.toLowerCase().includes(keyword)
+        );
+        
+        if (!hasSuggestionKeywords) {
+            return suggestions;
+        }
+
+        // Extract meal name if mentioned
+        let mealName = 'Breakfast'; // Default
+        const meals = ['breakfast', 'lunch', 'dinner', 'snack'];
+        for (const meal of meals) {
+            if (aiResponse.toLowerCase().includes(meal)) {
+                mealName = meal.charAt(0).toUpperCase() + meal.slice(1);
+                break;
+            }
+        }
+
+        // Try to extract specific food names and quantities
+        const foods = this.extractFoodsFromResponse(aiResponse);
+        
+        if (foods.length > 0) {
+            suggestions.push({
+                title: 'AI Food Recommendation',
+                mealName: mealName,
+                foods: foods
+            });
+        } else {
+            // Don't create generic suggestions - only create if we found specific foods
+            console.log('No specific foods found in AI response');
+        }
+
+        return suggestions;
+    }
+
+    /**
+     * Extract food names and quantities from AI response
+     */
+    extractFoodsFromResponse(response) {
+        const foods = [];
+        
+        // Common food patterns - more comprehensive
+        const patterns = [
+            // "Add 150g chicken breast"
+            /(?:add|suggest|recommend|try|include)\s+(\d+)\s*(?:g|grams?)\s+([^.!?,]+)/gi,
+            // "chicken breast (150g)"
+            /([^.!?,]+?)\s*\((\d+)\s*(?:g|grams?)\)/gi,
+            // "150g of chicken breast"
+            /(\d+)\s*(?:g|grams?)\s+of\s+([^.!?,]+)/gi,
+            // "adding 100g salmon"
+            /adding\s+(\d+)\s*(?:g|grams?)\s+([^.!?,]+)/gi,
+            // "2 egg whites" or "two egg whites"
+            /(?:(\d+)|two|three|four|five)\s+(?:egg whites?|eggs?)\b/gi,
+            // "protein powder" with quantity
+            /(?:add|include)\s+(\d+)\s*(?:g|grams?)\s+protein powder/gi,
+            // "cottage cheese" with quantity
+            /(?:add|include)\s+(\d+)\s*(?:g|grams?)\s+cottage cheese/gi
+        ];
+
+        patterns.forEach(pattern => {
+            let match;
+            while ((match = pattern.exec(response)) !== null) {
+                let quantity = 100; // Default
+                let foodName = 'Suggested Food';
+                
+                if (match[1] && !isNaN(parseInt(match[1]))) {
+                    quantity = parseInt(match[1]);
+                    foodName = match[2] ? match[2].trim() : 'Suggested Food';
+                } else if (match[2] && !isNaN(parseInt(match[2]))) {
+                    quantity = parseInt(match[2]);
+                    foodName = match[1] ? match[1].trim() : 'Suggested Food';
+                } else {
+                    // Handle text numbers like "two egg whites"
+                    if (match[0].toLowerCase().includes('two')) quantity = 2;
+                    else if (match[0].toLowerCase().includes('three')) quantity = 3;
+                    else if (match[0].toLowerCase().includes('four')) quantity = 4;
+                    else if (match[0].toLowerCase().includes('five')) quantity = 5;
+                    
+                    foodName = match[0].replace(/\d+|\b(two|three|four|five)\b/gi, '').trim();
+                }
+                
+                // Clean up food name
+                foodName = foodName.replace(/^[^a-zA-Z]+|[^a-zA-Z]+$/g, '').trim();
+                
+                // Avoid duplicates and empty names
+                if (foodName && foodName.length > 0 && !foods.some(f => f.name.toLowerCase() === foodName.toLowerCase())) {
+                    foods.push({
+                        name: foodName.charAt(0).toUpperCase() + foodName.slice(1),
+                        quantity: quantity,
+                        macros: {
+                            calories: 0, // Will be generated when accepted
+                            protein: 0,
+                            carbs: 0,
+                            fat: 0
+                        }
+                    });
+                }
+            }
+        });
+
+        // If no specific foods found, try to extract just food names
+        if (foods.length === 0) {
+            const commonFoods = [
+                'chicken breast', 'salmon', 'eggs', 'egg whites', 'greek yogurt', 'quinoa', 'rice',
+                'avocado', 'spinach', 'broccoli', 'sweet potato', 'almonds', 'banana',
+                'oatmeal', 'protein powder', 'olive oil', 'mixed berries', 'cottage cheese',
+                'chia seeds', 'hemp seeds', 'almond butter', 'peanut butter'
+            ];
+            
+            for (const food of commonFoods) {
+                if (response.toLowerCase().includes(food)) {
+                    foods.push({
+                        name: food.charAt(0).toUpperCase() + food.slice(1),
+                        quantity: 100,
+                        macros: {
+                            calories: 0,
+                            protein: 0,
+                            carbs: 0,
+                            fat: 0
+                        }
+                    });
+                    break; // Only suggest the first match to avoid too many suggestions
+                }
+            }
+        }
+
+        return foods;
+    }
+
+    /**
+     * Show suggestions tab
+     */
+    showSuggestionsTab() {
+        if (typeof switchTab === 'function') {
+            switchTab('suggestions');
+        }
+    }
+
+    /**
+     * Render all suggestions
+     */
+    renderSuggestions() {
+        const container = document.getElementById('suggestionsContainer');
+        const noSuggestionsEl = document.getElementById('noSuggestions');
+        
+        if (!container) {
+            console.warn('Suggestions container not found');
+            return;
+        }
+
+        // Get pending suggestions
+        const pendingSuggestions = this.suggestions.filter(s => s.status === 'pending');
+
+        if (pendingSuggestions.length === 0) {
+            if (noSuggestionsEl) {
+                noSuggestionsEl.style.display = 'block';
+            }
+            container.innerHTML = '';
+            this.updateSuggestionsTabBadge();
+            return;
+        }
+
+        if (noSuggestionsEl) {
+            noSuggestionsEl.style.display = 'none';
+        }
+        container.innerHTML = '';
+
+        pendingSuggestions.forEach(suggestion => {
+            const suggestionElement = this.createSuggestionElement(suggestion);
+            container.appendChild(suggestionElement);
+        });
+
+        // Update badge after rendering
+        this.updateSuggestionsTabBadge();
+    }
+
+    /**
+     * Create a suggestion element
+     */
+    createSuggestionElement(suggestion) {
+        const div = document.createElement('div');
+        div.className = 'suggestion-card';
+        div.setAttribute('data-suggestion-id', suggestion.id);
+
+        const foodsHtml = suggestion.foods.map(food => `
+            <div class="suggestion-food">
+                <div class="food-info">
+                    <div class="food-name">${food.name}</div>
+                    <div class="food-quantity">${food.quantity}g</div>
+                </div>
+                <div class="food-macros">
+                    <div class="macro-calories">${Math.round(food.macros.calories)} kcal</div>
+                    <div class="macro-details">
+                        ${Math.round(food.macros.protein)}g P | ${Math.round(food.macros.carbs)}g C | ${Math.round(food.macros.fat)}g F
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+        div.innerHTML = `
+            <div class="suggestion-header">
+                <div class="suggestion-title">
+                    🤖 ${suggestion.title}
+                </div>
+                <div class="suggestion-meal">
+                    ${suggestion.mealName}
+                </div>
+            </div>
+            <div class="suggestion-body">
+                ${foodsHtml}
+                <div class="suggestion-actions">
+                    <button class="suggestion-btn accept" onclick="aiSuggestionsManager.acceptSuggestion(${suggestion.id})">
+                        ✅ Accept
+                    </button>
+                    <button class="suggestion-btn reject" onclick="aiSuggestionsManager.rejectSuggestion(${suggestion.id})">
+                        ❌ Reject
+                    </button>
+                    <button class="suggestion-btn dismiss" onclick="aiSuggestionsManager.dismissSuggestion(${suggestion.id})">
+                        🗑️ Dismiss
+                    </button>
+                </div>
+            </div>
+        `;
+
+        return div;
+    }
+
+    /**
+     * Accept a suggestion
+     */
+    async acceptSuggestion(suggestionId) {
+        const suggestion = this.suggestions.find(s => s.id === suggestionId);
+        if (!suggestion) return;
+
+        try {
+            // Show loading state
+            this.mealPlanManager.showLoading(true);
+            
+            // Find the target meal
+            const meal = this.mealPlanManager.currentMealPlan.meals.find(
+                m => m.name.toLowerCase() === suggestion.mealName.toLowerCase()
+            );
+
+            if (!meal) {
+                alert(`Meal "${suggestion.mealName}" not found. Please add it first.`);
+                this.mealPlanManager.showLoading(false);
+                return;
+            }
+
+            // Add each food to the meal
+            for (const food of suggestion.foods) {
+                // Check if food exists in database
+                const existingFood = this.mealPlanManager.foods.find(
+                    f => f.name.toLowerCase() === food.name.toLowerCase()
+                );
+
+                if (existingFood) {
+                    // Use existing food
+                    await this.api.addFoodToMeal(meal.id, existingFood.id, food.quantity);
+                } else {
+                    // Generate macros and add directly
+                    const nutritionalData = await this.api.generateMacros(food.name);
+                    await this.api.addDirectFoodToMeal(meal.id, food.name, food.quantity, nutritionalData);
+                }
+            }
+
+            // Update suggestion status
+            suggestion.status = 'accepted';
+            
+            // Reload meal plan to show changes
+            await this.mealPlanManager.reloadMealPlan();
+            
+            // Show success message
+            this.mealPlanManager.showSuccess(`Added ${suggestion.foods.length} food(s) to ${suggestion.mealName}!`);
+            
+            // Remove from UI
+            this.renderSuggestions();
+            
+            // Switch back to meals tab
+            setTimeout(() => {
+                if (typeof switchTab === 'function') {
+                    switchTab('meals');
+                }
+            }, 500); // Small delay to ensure UI updates are complete
+
+        } catch (error) {
+            console.error('Error accepting suggestion:', error);
+            this.mealPlanManager.showError(`Failed to add foods: ${error.message}`);
+        } finally {
+            this.mealPlanManager.showLoading(false);
+        }
+    }
+
+    /**
+     * Reject a suggestion
+     */
+    rejectSuggestion(suggestionId) {
+        const suggestion = this.suggestions.find(s => s.id === suggestionId);
+        if (!suggestion) return;
+
+        suggestion.status = 'rejected';
+        this.renderSuggestions();
+        
+        // Show feedback
+        this.mealPlanManager.showSuccess('Suggestion rejected');
+    }
+
+    /**
+     * Dismiss a suggestion
+     */
+    dismissSuggestion(suggestionId) {
+        const suggestion = this.suggestions.find(s => s.id === suggestionId);
+        if (!suggestion) return;
+
+        suggestion.status = 'dismissed';
+        this.renderSuggestions();
+    }
+
+    /**
+     * Clear all suggestions
+     */
+    clearAllSuggestions() {
+        this.suggestions = [];
+        this.renderSuggestions();
+    }
+
+    /**
+     * Get suggestions count
+     */
+    getPendingSuggestionsCount() {
+        return this.suggestions.filter(s => s.status === 'pending').length;
+    }
+
+    /**
+     * Update suggestions tab badge
+     */
+    updateSuggestionsTabBadge() {
+        const suggestionsTab = document.getElementById('suggestionsTab');
+        if (!suggestionsTab) return;
+
+        const pendingCount = this.getPendingSuggestionsCount();
+        
+        // Remove existing badge
+        const existingBadge = suggestionsTab.querySelector('.tab-badge');
+        if (existingBadge) {
+            existingBadge.remove();
+        }
+
+        // Add badge if there are pending suggestions
+        if (pendingCount > 0) {
+            const badge = document.createElement('span');
+            badge.className = 'tab-badge';
+            badge.style.cssText = `
+                background: #dc3545;
+                color: white;
+                border-radius: 50%;
+                padding: 2px 6px;
+                font-size: 11px;
+                font-weight: bold;
+                margin-left: 8px;
+                min-width: 18px;
+                text-align: center;
+                line-height: 1.2;
+            `;
+            badge.textContent = pendingCount;
+            suggestionsTab.appendChild(badge);
+        }
+    }
+}
+
 // Create global meal plan manager instance
 window.mealPlanManager = new MealPlanManager(window.nutritionistAPI);
+
+// Create global AI suggestions manager instance
+window.aiSuggestionsManager = new AISuggestionsManager(window.nutritionistAPI, window.mealPlanManager);
 
