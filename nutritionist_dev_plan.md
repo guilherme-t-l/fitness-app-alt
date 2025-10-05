@@ -82,9 +82,8 @@ Transform the existing LLM wrapper chat interface into a comprehensive nutrition
 
 
 3. **🔄 Chat Commands & Actions**
-  - ❌ "Replace all dairy in this meal plan"
-  - ❌ "Make dinner higher protein"
-  - ❌ "Suggest a 1500-calorie version"
+  - ❌ "Edit [food] quantity on [meal]" - Edit a quantity of an existing food
+  - ❌ "Delete [food] from [meal]" - Delete a food 
   - ✅ "Add [food] to [meal]" - Basic food addition working
 
 
